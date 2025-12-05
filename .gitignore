@@ -1,0 +1,3 @@
+# ignore outputted CSVs
+*.csv
+missing_values_summary.csv
