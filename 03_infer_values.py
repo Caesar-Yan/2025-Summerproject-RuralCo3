@@ -6,6 +6,9 @@
 # failed_accounts_df = all_data.get('failed_accounts')
 # merchant_discount_df = all_data.get('merchant_discount')
 
+import json
+import re
+
 imputed_ats_invoice_df = ats_invoice_df
 imputed_ats_invoice_line_item_df = ats_invoice_line_item_df
 imputed_invoice_df = invoice_df
@@ -132,10 +135,50 @@ testing_df.to_csv('testing.csv', index=False, mode='w')
 print(f"Number of rows with non-empty extras: {extras_mask.sum()}")
 
 
+# pulling out original price from extras column
+# Filter to only rows where extras is not null and not '{}'
+# Create mask for rows where extras contains 'original_price'
+original_price_mask = (
+    testing_df['extras'].notnull() & 
+    (testing_df['extras'] != '{}') &
+    testing_df['extras'].str.contains('original_price', na=False)
+)
+
+# Apply the mask
+testing_df = testing_df[original_price_mask]
+
+testing_df = imputed_ats_invoice_line_item_df[extras_mask]
+testing_df.to_csv('testing.csv', index=False, mode='w')
+
+print(f"Number of rows with 'original_price' in extras: {original_price_mask.sum()}")
+
+# Extract original_price using regex directly
+testing_df['imp_original_price'] = testing_df['extras'].str.extract(
+    r"'original_price'\s*:\s*(\d+\.?\d*)"
+).astype(float)
+
+testing_df = imputed_ats_invoice_line_item_df[extras_mask]
+testing_df.to_csv('testing.csv', index=False, mode='w')
+
+# Create a boolean column to check if the equality holds
+testing_df['price_check'] = (
+    testing_df['imp_original_price'] == 
+    (testing_df['line_net_amt_received'] + testing_df['discount_offered'])
+)
+
+# See how many rows match
+print(f"Number of rows where imp_original_price = line_net_amt_received + discount_offered: {testing_df['price_check'].sum()}")
+print(f"Total rows: {len(testing_df)}")
+print(f"Percentage matching: {testing_df['price_check'].sum() / len(testing_df) * 100:.2f}%")
 
 
+# Filter to only rows where price_check is False
+mismatches_df = testing_df[testing_df['price_check'] == False]
 
+# Save to CSV
+mismatches_df.to_csv('testing.csv', index=False, mode='w')
 
+print(f"Saved {len(mismatches_df)} rows with price_check = False to testing.csv")
 
 
 # ================================================= generetate the descriptive statistics ====================================
