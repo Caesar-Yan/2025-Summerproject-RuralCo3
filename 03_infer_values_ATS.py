@@ -8,6 +8,8 @@
 
 import json
 import re
+from pathlib import Path
+import pandas as pd
 
 imputed_ats_invoice_df = ats_invoice_df
 imputed_ats_invoice_line_item_df = ats_invoice_line_item_df
@@ -129,56 +131,135 @@ extras_mask = (
     (imputed_ats_invoice_line_item_df['extras'] != '{}')
 )
 
-testing_df = imputed_ats_invoice_line_item_df[extras_mask]
-testing_df.to_csv('testing.csv', index=False, mode='w')
+extras_df = imputed_ats_invoice_line_item_df[extras_mask]
+
+# Delete the file if it exists and create new
+Path('testing.csv').unlink(missing_ok=True)
+extras_df.to_csv('testing.csv', index=False)
 
 print(f"Number of rows with non-empty extras: {extras_mask.sum()}")
+# 28094 rows total with non-null extras column
 
 
 # pulling out original price from extras column
 # Filter to only rows where extras is not null and not '{}'
 # Create mask for rows where extras contains 'original_price'
 original_price_mask = (
-    testing_df['extras'].notnull() & 
-    (testing_df['extras'] != '{}') &
-    testing_df['extras'].str.contains('original_price', na=False)
+    extras_df['extras'].notnull() & 
+    (extras_df['extras'] != '{}') &
+    extras_df['extras'].str.contains('original_price', na=False)
 )
 
 # Apply the mask
-testing_df = testing_df[original_price_mask]
+original_price_df = extras_df[original_price_mask]
 
-testing_df = imputed_ats_invoice_line_item_df[extras_mask]
-testing_df.to_csv('testing.csv', index=False, mode='w')
+# Save to CSV
+Path('testing.csv').unlink(missing_ok=True)
+original_price_df.to_csv('testing.csv', index=False)
 
 print(f"Number of rows with 'original_price' in extras: {original_price_mask.sum()}")
+# 4487/28094 non-empty extras rows
 
 # Extract original_price using regex directly
-testing_df['imp_original_price'] = testing_df['extras'].str.extract(
+original_price_df.loc[:, 'imp_original_price'] = original_price_df['extras'].str.extract(
     r"'original_price'\s*:\s*(\d+\.?\d*)"
 ).astype(float)
 
-testing_df = imputed_ats_invoice_line_item_df[extras_mask]
-testing_df.to_csv('testing.csv', index=False, mode='w')
+Path('testing.csv').unlink(missing_ok=True)
+original_price_df.to_csv('testing.csv', index=False)
 
 # Create a boolean column to check if the equality holds
-testing_df['price_check'] = (
-    testing_df['imp_original_price'] == 
-    (testing_df['line_net_amt_received'] + testing_df['discount_offered'])
+# .round(2) to account for float issues
+original_price_df['price_check'] = (
+    original_price_df['imp_original_price'].round(2) == 
+    (original_price_df['line_net_amt_received'] + original_price_df['discount_offered']).round(2)
 )
 
 # See how many rows match
-print(f"Number of rows where imp_original_price = line_net_amt_received + discount_offered: {testing_df['price_check'].sum()}")
-print(f"Total rows: {len(testing_df)}")
-print(f"Percentage matching: {testing_df['price_check'].sum() / len(testing_df) * 100:.2f}%")
+print(f"Number of rows where imp_original_price = line_net_amt_received + discount_offered: {original_price_df['price_check'].sum()}")
+print(f"Total rows: {len(original_price_df)}")
+print(f"Percentage matching: {original_price_df['price_check'].sum() / len(original_price_df) * 100:.2f}%")
 
 
 # Filter to only rows where price_check is False
-mismatches_df = testing_df[testing_df['price_check'] == False]
+mismatches_df = original_price_df[original_price_df['price_check'] == False]
 
 # Save to CSV
+Path('testing.csv').unlink(missing_ok=True)
 mismatches_df.to_csv('testing.csv', index=False, mode='w')
 
 print(f"Saved {len(mismatches_df)} rows with price_check = False to testing.csv")
+# Have ensured fidelity of data in regards to discounts received by cardholder from gas stations
+
+# pulling out 'new_unit_price' and 'bulk_rate' from extras column
+# Filter to only rows where extras is not null and not '{}'
+# Create mask for rows where extras contains 'new_unit_price' and 'bulk_rate'
+bulk_rate_mask = (
+    extras_df['extras'].notnull() & 
+    (extras_df['extras'] != '{}') &
+    extras_df['extras'].str.contains('bulk_rate', na=False)
+)
+
+# Apply the mask and create a copy
+bulk_rate_df = extras_df[bulk_rate_mask].copy()
+# Save as CSV
+bulk_rate_df.to_csv('temp_csvs/bulk_rate_data.csv', index=False)
+# Read back
+bulk_rate_df = pd.read_csv('temp_csvs/bulk_rate_data.csv')
+
+# Check if every row in bulk_rate_df['extras'] contains 'new_unit_price'
+contains_new_unit_price = bulk_rate_df['extras'].str.contains('new_unit_price', na=False)
+
+# Check if ALL rows contain it
+all_contain = contains_new_unit_price.all()
+all_contain
+# TRUE
+
+# Save to CSV
+Path('testing.csv').unlink(missing_ok=True)
+bulk_rate_df.to_csv('testing.csv', index=False)
+
+print(f"Number of rows with 'bulk_rate' in extras: {len(bulk_rate_df)}")
+# 12283/28094 rows with non-empty extras column
+# 4487 rows from original_price makes 16770/28094 parsed so far
+
+# Extract 'bulk_rate' and 'new_unit_price' using regex directly
+bulk_rate_df.loc[:, 'imp_bulk_rate'] = bulk_rate_df['extras'].str.extract(
+    r"'bulk_rate'\s*:\s*(\d+\.?\d*)"
+).astype(float).round(4)
+
+bulk_rate_df.loc[:, 'imp_new_unit_price'] = bulk_rate_df['extras'].str.extract(
+    r"'new_unit_price'\s*:\s*(\d+\.?\d*)"
+).astype(float).round(4)
+
+# Check for nulls in the newly created columns
+print(f"Nulls in imp_bulk_rate: {bulk_rate_df['imp_bulk_rate'].isna().sum()}")
+print(f"Nulls in imp_new_unit_price: {bulk_rate_df['imp_new_unit_price'].isna().sum()}")
+# 959 nulls in imp_bulk_rate
+# This is because the actual is recorded as None, so record as 0
+
+# Replace nulls with zero in imp_bulk_rate
+bulk_rate_df['imp_bulk_rate'] = bulk_rate_df['imp_bulk_rate'].fillna(0)
+print(f"Nulls in imp_bulk_rate: {bulk_rate_df['imp_bulk_rate'].isna().sum()}")
+
+Path('testing.csv').unlink(missing_ok=True)
+bulk_rate_df.to_csv('testing.csv', index=False)
+
+# Create a boolean column to check if the equality holds
+# .round(4) to account for float issues
+bulk_rate_df['price_check'].round(4) = (
+    # bulk_rate_df['unit_gross_amt_received'].round(4) == 
+    (bulk_rate_df['imp_new_unit_price'] - bulk_rate_df['imp_bulk_rate']
+     - bulk_rate_df['unit_gross_amt_received'])
+)
+
+Path('testing.csv').unlink(missing_ok=True)
+bulk_rate_df.to_csv('testing.csv', index=False)
+
+# See how many rows match
+print(f"Number of rows where imp_original_price = line_net_amt_received + discount_offered: {bulk_rate_df['price_check'].sum()}")
+print(f"Total rows: {len(bulk_rate_df)}")
+print(f"Percentage matching: {bulk_rate_df['price_check'].sum() / len(bulk_rate_df) * 100:.2f}%")
 
 
 # ================================================= generetate the descriptive statistics ====================================
