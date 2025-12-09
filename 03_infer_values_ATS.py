@@ -10,11 +10,10 @@ import json
 import re
 from pathlib import Path
 import pandas as pd
+import numpy as np
 
 imputed_ats_invoice_df = ats_invoice_df
 imputed_ats_invoice_line_item_df = ats_invoice_line_item_df
-imputed_invoice_df = invoice_df
-imputed_invoice_line_item_df = invoice_line_item_df
 
 # =========================================== imputing ats_invoice ==================================================================== #
 print(imputed_ats_invoice_df.columns)
@@ -140,7 +139,6 @@ extras_df.to_csv('testing.csv', index=False)
 print(f"Number of rows with non-empty extras: {extras_mask.sum()}")
 # 28094 rows total with non-null extras column
 
-
 # pulling out original price from extras column
 # Filter to only rows where extras is not null and not '{}'
 # Create mask for rows where extras contains 'original_price'
@@ -245,12 +243,12 @@ print(f"Nulls in imp_bulk_rate: {bulk_rate_df['imp_bulk_rate'].isna().sum()}")
 Path('testing.csv').unlink(missing_ok=True)
 bulk_rate_df.to_csv('testing.csv', index=False)
 
-# Create a boolean column to check if the equality holds
-# .round(4) to account for float issues
-bulk_rate_df['price_check'].round(4) = (
-    # bulk_rate_df['unit_gross_amt_received'].round(4) == 
-    (bulk_rate_df['imp_new_unit_price'] - bulk_rate_df['imp_bulk_rate']
-     - bulk_rate_df['unit_gross_amt_received'])
+# Check if values are equal within tolerance
+bulk_rate_df['price_check'] = np.isclose(
+    bulk_rate_df['unit_gross_amt_received'],
+    bulk_rate_df['imp_new_unit_price'] - bulk_rate_df['imp_bulk_rate'],
+    rtol=0,
+    atol=1e-4  # tolerance of 0.0001 (4 decimal places)
 )
 
 Path('testing.csv').unlink(missing_ok=True)
@@ -260,6 +258,67 @@ bulk_rate_df.to_csv('testing.csv', index=False)
 print(f"Number of rows where imp_original_price = line_net_amt_received + discount_offered: {bulk_rate_df['price_check'].sum()}")
 print(f"Total rows: {len(bulk_rate_df)}")
 print(f"Percentage matching: {bulk_rate_df['price_check'].sum() / len(bulk_rate_df) * 100:.2f}%")
+
+
+# Create a mask that excludes rows matching either original_price_mask or bulk_rate_mask
+leftover_extras_mask = (
+    extras_df['extras'].notnull() & 
+    (extras_df['extras'] != '{}') &
+    ~extras_df['extras'].str.contains('original_price', na=False) &
+    ~extras_df['extras'].str.contains('bulk_rate', na=False)
+)
+
+# Apply the mask and create a copy
+leftovers_df = extras_df[leftover_extras_mask].copy()
+# Save as CSV
+leftovers_df.to_csv('temp_csvs/leftover_extras_data.csv', index=False)
+# Read back
+leftovers_df = pd.read_csv('temp_csvs/leftover_extras_data.csv')
+
+# Create a mask to filter out yourRate from remaining extras rows
+yourRate_mask = (
+    extras_df['extras'].notnull() & 
+    (extras_df['extras'] != '{}') &
+    ~extras_df['extras'].str.contains('original_price', na=False) &
+    ~extras_df['extras'].str.contains('bulk_rate', na=False) &
+    extras_df['extras'].str.contains('yourRate')
+)
+
+# Apply the mask and create a copy
+yourRate_df = extras_df[yourRate_mask].copy()
+# Save as CSV
+yourRate_df.to_csv('temp_csvs/yourRate_data.csv', index=False)
+# Read back
+yourRate_df = pd.read_csv('temp_csvs/yourRate_data.csv')
+
+print(f"Number of rows with 'yourRate' in extras: {len(yourRate_df)}")
+# 12283/28094 rows with bulk_rate and new_unit_price
+# 4487 rows from original_price makes 16770/28094 parsed so far
+# 11311 rows from yourRate 
+# total 28081/28094. remaining rows have only address information
+
+# Extract 'bulk_rate' and 'new_unit_price' using regex directly
+yourRate_df.loc[:, 'imp_yourRate'] = yourRate_df['extras'].str.extract(
+    r"'yourRate'\s*:\s*'(\d+\.?\d*)'"
+).astype(float)
+
+Path('testing.csv').unlink(missing_ok=True)
+yourRate_df.to_csv('testing.csv', index=False)
+
+yourRate_df['imp_line_net_amt_received'] = yourRate_df['imp_yourRate'] * yourRate_df['quantity']
+yourRate_df['imp_line_net_amt_received'] = yourRate_df['imp_line_net_amt_received'].round(2)
+
+# Check relationship is as expected
+yourRate_df['is_equal'] = yourRate_df['line_net_amt_received'] == yourRate_df['imp_line_net_amt_received']
+
+# See results
+print(yourRate_df['is_equal'].value_counts())
+# 1 FALSE, because of negative value for quantity, yourRate, etc.
+
+Path('testing.csv').unlink(missing_ok=True)
+yourRate_df.to_csv('testing.csv', index=False)
+
+
 
 
 # ================================================= generetate the descriptive statistics ====================================
