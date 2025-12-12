@@ -56,24 +56,27 @@ imputed_invoice_line_item_df = imputed_invoice_line_item_df[[
 Path('imputed_invoice_line_item.csv').unlink(missing_ok=True)
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False)
 
-# Create mask for rows with no nulls in specified columns
-mask = (
-    imputed_invoice_line_item_df['quantity'].notna() & 
-    imputed_invoice_line_item_df['unit_gross_amt_received'].notna() & 
-    imputed_invoice_line_item_df['line_gross_amt_received'].notna() &
-    imputed_invoice_line_item_df['discount_offered'].notna() &
-    (imputed_invoice_line_item_df['discount_offered'] != 0)
-)
+# # Create mask for rows with no nulls in specified columns
+# mask = (
+#     imputed_invoice_line_item_df['quantity'].notna() & 
+#     imputed_invoice_line_item_df['unit_gross_amt_received'].notna() & 
+#     imputed_invoice_line_item_df['line_gross_amt_received'].notna() &
+#     imputed_invoice_line_item_df['discount_offered'].notna() &
+#     (imputed_invoice_line_item_df['discount_offered'] != 0)
+# )
 
-# Apply mask to create filtered copy
-discount_testing_imputed_invoice_line_item_df = imputed_invoice_line_item_df[mask].copy()
+# # Apply mask to create filtered copy
+# discount_testing_imputed_invoice_line_item_df = imputed_invoice_line_item_df[mask].copy()
 
-# Print statistics
-print(f"Length of filtered dataframe: {len(discount_testing_imputed_invoice_line_item_df)}")
-print(f"Length of original dataframe: {len(imputed_invoice_line_item_df)}")
-rows_excluded = len(imputed_invoice_line_item_df) - len(discount_testing_imputed_invoice_line_item_df)
-percentage_excluded = (rows_excluded / len(imputed_invoice_line_item_df)) * 100
-print(f"Percentage of rows excluded by mask: {percentage_excluded:.2f}%")
+# # Print statistics
+# print(f"Length of filtered dataframe: {len(discount_testing_imputed_invoice_line_item_df)}")
+# print(f"Length of original dataframe: {len(imputed_invoice_line_item_df)}")
+# rows_excluded = len(imputed_invoice_line_item_df) - len(discount_testing_imputed_invoice_line_item_df)
+# percentage_excluded = (rows_excluded / len(imputed_invoice_line_item_df)) * 100
+# print(f"Percentage of rows excluded by mask: {percentage_excluded:.2f}%")
+
+# direct copy of df. comment out if filtering with  mask
+discount_testing_imputed_invoice_line_item_df = imputed_invoice_line_item_df.copy()
 
 # Checking discount_offered record type (either as percentage, or rate)
 # Create new column check_discount_isPercentage
@@ -182,10 +185,60 @@ if more_than_one_true_count > 0:
 # total percentage of rows that have discount category verified
 percentage_not_null = calculate_percentage_not_null(discount_testing_imputed_invoice_line_item_df, 'discount_category')
 print(f"Percentage of discount_category that is not null: {percentage_not_null:.2f}%")
+# 64.21% accounted for so far
 
 # Save to CSV
 discount_testing_imputed_invoice_line_item_df.to_csv('testing.csv', index=False)
 
+
+discount_testing_imputed_invoice_line_item_df['check_discount_isAmtOffGross'] = (
+    (discount_testing_imputed_invoice_line_item_df['quantity'] * 
+     discount_testing_imputed_invoice_line_item_df['unit_gross_amt_received'] - 
+     discount_testing_imputed_invoice_line_item_df['discount_offered']) == 
+    np.where(
+        discount_testing_imputed_invoice_line_item_df['line_net_amt_received'].isna(),
+        discount_testing_imputed_invoice_line_item_df['line_net_amt_derived'],
+        discount_testing_imputed_invoice_line_item_df['line_net_amt_received']
+    )
+)
+
+# Check percentage of True values in check_discount_isTotalOffatCheckout
+percentage_true = calculate_percentage_true(discount_testing_imputed_invoice_line_item_df, 'check_discount_isAmtOffGross')
+print(f"Percentage of records where discount appears to be an amount taken off gross: {percentage_true:.2f}%")
+# 14.44% of rows have discount recorded as a sum taken off gross
+
+# Update discount_category only where check_discount_isAmtOffGross is True
+discount_testing_imputed_invoice_line_item_df.loc[
+    discount_testing_imputed_invoice_line_item_df['check_discount_isAmtOffGross'] == True, 
+    'discount_category'
+] = "isAmtOffGross"
+
+# check for values where more than one condition is true
+check_columns = ['check_discount_isNegativeOff', 'check_discount_isTotalOffatCheckout', 
+                 'check_discount_isPercentage', 'check_discount_isAmtOffGross']
+
+# Count how many True values each row has across these columns
+true_count_per_row = discount_testing_imputed_invoice_line_item_df[check_columns].sum(axis=1)
+
+# Find rows where more than one condition is True
+more_than_one_true_mask = true_count_per_row > 1
+more_than_one_true_count = more_than_one_true_mask.sum()
+
+# Get the Unnamed: 0 values for those rows
+if more_than_one_true_count > 0:
+    unnamed_0_values = discount_testing_imputed_invoice_line_item_df.loc[more_than_one_true_mask, 'Unnamed: 0'].tolist()
+    print(f"Unnamed: 0 values: {unnamed_0_values}")
+    
+    # Optionally show which combinations are True for these rows
+    print("\nWhich checks are True for these rows:")
+    print(discount_testing_imputed_invoice_line_item_df.loc[more_than_one_true_mask, ['Unnamed: 0'] + check_columns])
+
+# total percentage of rows that have discount category verified
+percentage_not_null = calculate_percentage_not_null(discount_testing_imputed_invoice_line_item_df, 'discount_category')
+print(f"Percentage of discount_category that is not null: {percentage_not_null:.2f}%")
+
+# Save to CSV
+discount_testing_imputed_invoice_line_item_df.to_csv('testing.csv', index=False)
 
 
 
