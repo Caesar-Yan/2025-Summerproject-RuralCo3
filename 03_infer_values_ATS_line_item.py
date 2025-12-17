@@ -3,6 +3,16 @@ import re
 from pathlib import Path
 import pandas as pd
 import numpy as np
+import pickle
+
+# Load the data
+with open('all_data.pkl', 'rb') as f:
+    all_data = pickle.load(f)
+
+with open('analyze_dataframe.pkl', 'rb') as f:
+    analyze_dataframe = pickle.load(f)
+
+ats_invoice_line_item_df = all_data.get('ats_invoice_line_item')
 
 imputed_ats_invoice_line_item_df = ats_invoice_line_item_df
 
@@ -106,6 +116,16 @@ def merge_updates_to_main_df(main_df, update_df, columns_to_update, id_column='U
     for col in columns_to_update:
         print(get_non_null_percentage(main_df, col))
 
+# Create a dictionary with all your functions
+invoice_functions = {
+    'get_non_null_percentage': get_non_null_percentage,
+    'check_diff': check_diff,
+    'merge_updates_to_main_df': merge_updates_to_main_df,
+}
+
+# Save all functions to a single pickle file
+with open('invoice_functions.pkl', 'wb') as f:
+    pickle.dump(invoice_functions, f)
 
 # ============================================================================================================
 # UNIT GROSS AMOUNT IMPUTATION
@@ -942,3 +962,14 @@ no_flags_mask = (
 no_flags_df = imputed_ats_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
 no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+
+
+# Load your CSV
+df = pd.read_csv('imputed_ats_invoice_line_item.csv')
+
+# See all unique values
+print(df['flag'].unique())
+# ['price_zero' 'discount_assumed_zero' 'discount_zero' 'discount_regular'
+#  'your_rate' 'original_price' 'bulk_rate' 'discount_not_given' 'no_price'
+#  'discounted' 'free_gift']

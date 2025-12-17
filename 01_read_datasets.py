@@ -10,6 +10,7 @@
 
 from pathlib import Path
 import pandas as pd
+import pickle
 
 # Define base directories
 base_dir = Path("T:/projects/2025/RuralCo")
@@ -63,3 +64,6 @@ invoice_line_item_df = all_data.get('invoice_line_item')
 failed_accounts_df = all_data.get('failed_accounts')
 merchant_discount_df = all_data.get('merchant_discount')
 
+# Save the dictionary of dataframes
+with open('all_data.pkl', 'wb') as f:
+    pickle.dump(all_data, f)

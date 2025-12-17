@@ -1,5 +1,10 @@
 import pandas as pd
 import numpy as np
+import pickle
+
+# Load the data
+with open('all_data.pkl', 'rb') as f:
+    all_data = pickle.load(f)
 
 def analyze_dataframes(data_dict, output_filename='missing_values_summary.csv'):
     """
@@ -60,13 +65,6 @@ def analyze_dataframes(data_dict, output_filename='missing_values_summary.csv'):
     
     return results_df
 
-# Generate descriptive statistics
-original_results = analyze_dataframes(all_data, 'original_missing_values_summary.csv')
-
-
-import pandas as pd
-import numpy as np
-
 def analyze_dataframe(df, df_name='dataframe', output_filename='missing_values_summary.csv'):
     """
     Analyze a single dataframe for missing values and basic statistics.
@@ -125,3 +123,11 @@ def analyze_dataframe(df, df_name='dataframe', output_filename='missing_values_s
     print(f"Saved to {output_filename}")
     
     return results_df
+
+# Generate descriptive statistics
+original_results = analyze_dataframes(all_data, 'original_missing_values_summary.csv')
+print("original_missing_values_summary.csv generated!")
+
+# Save the function
+with open('analyze_dataframe.pkl', 'wb') as f:
+    pickle.dump(analyze_dataframe, f)
