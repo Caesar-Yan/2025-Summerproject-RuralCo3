@@ -4,6 +4,10 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import pickle
+import dill
+
+with open('analyze_dataframe.pkl', 'rb') as f:
+    analyze_dataframe = dill.load(f)
 
 # Load the data
 with open('all_data.pkl', 'rb') as f:
@@ -12,6 +16,10 @@ with open('all_data.pkl', 'rb') as f:
 # Load all functions
 with open('invoice_functions.pkl', 'rb') as f:
     funcs = pickle.load(f)
+
+with open('analyze_dataframe.pkl', 'rb') as f:
+    analyze_dataframe = pickle.load(f)
+
 
 invoice_df = all_data.get('invoice')
 invoice_line_item_df = all_data.get('invoice_line_item')
@@ -302,50 +310,49 @@ negative_sum_df = save_and_summarize(
     'negative_sum'
 )
 
-# Check the math to calculate undiscounted price. line_gross_derived is assumed to be undiscounted price
-# use isclose() to account for rounding error
-negative_sum_df['check_relationship'] = (
-    negative_sum_df['line_net_amt_received'] +
-    negative_sum_df['discount_offered'] ==
-    negative_sum_df['']
+# Check the math to calculate undiscounted price. line_gross_amt_derived is assumed to be undiscounted price
+negative_sum_df['check_relationship'] = np.isclose(
+    negative_sum_df['line_net_amt_received'] + negative_sum_df['discount_offered'],
+    negative_sum_df['line_gross_amt_derived'],
+    atol=0.01
 )
 
-percentage_off_df.to_csv('testing.csv', index=False)
+negative_sum_df.to_csv('testing.csv', index=False)
 
-percentage_true = calculate_percentage_true(percentage_off_df, 'check_relationship')
+percentage_true = calculate_percentage_true(negative_sum_df, 'check_relationship')
 print(f"Percentage where relationship holds true: {percentage_true:.2f}%")
-# 99.41%
+# 15.16%
 
 # Filter for lines where check_relationship is TRUE
-percentage_off_check_true_mask = (
-    percentage_off_df['check_relationship'] == True
+negative_sum_check_true_mask = (
+    negative_sum_df['check_relationship'] == True
 )
 
-percentage_off_df = save_and_summarize(
-    percentage_off_df, 
-    percentage_off_check_true_mask, 
+negative_sum_check_true_df = save_and_summarize(
+    negative_sum_df, 
+    negative_sum_check_true_mask, 
     'testing.csv',
-    'Percentage_off_check_true'
+    'negative_sum_check_true'
 )
 
 # Set the main delivery columns
-percentage_off_df['undiscounted_price'] = percentage_off_df['line_gross_amt_received']
-percentage_off_df['discounted_price'] = percentage_off_df['line_net_amt_derived']
-percentage_off_df['flag'] = 'percentage_off' 
+negative_sum_check_true_df['undiscounted_price'] = negative_sum_check_true_df['line_gross_amt_received']
+negative_sum_check_true_df['discounted_price'] = negative_sum_check_true_df['line_net_amt_derived']
+negative_sum_check_true_df['flag'] = 'negative_sum_off' 
 
 # Save to CSV
-percentage_off_df.to_csv('testing.csv', index=False)
+negative_sum_check_true_df.to_csv('testing.csv', index=False)
 
 # ============================================================================================================
-# ADD PERCENTAGE_OFF FLAG TO MAIN DATAFRAME
+# ADD negative_sum_off FLAG TO MAIN DATAFRAME
 # ============================================================================================================
 
 merge_updates_to_main_df(
     imputed_invoice_line_item_df, 
-    percentage_off_df, 
+    negative_sum_check_true_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 94,162 rows, or 16.19% flagged
+# 95,061 rows, or 16.34% flagged
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -359,36 +366,278 @@ no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
 no_flags_df.to_csv('no_flags_df.csv', index=False)
 
 
+# ============================================================================================================
+# FILTER OUT x_for_the_price_of_1 FROM imputed_invoice_line_item_df
+# ============================================================================================================
 
-
-
-
-
-
-
-# First condition: Negative_sum (exclude mask0 rows)
-mask1 = (
-    (discount_testing_imputed_invoice_line_item_df['discount_offered'] < 0) &
-    (discount_testing_imputed_invoice_line_item_df['line_net_amt_received'] == 
-     (discount_testing_imputed_invoice_line_item_df['line_gross_amt_received'] - 
-      discount_testing_imputed_invoice_line_item_df['discount_offered'])) &
-    (~mask0)  # Exclude rows already marked as No_info
+# Filter for lines where discount_offered is recorded as a percentage to take off
+x_for_1_mask = (
+        no_flags_df['discount_offered'] < 0
 )
-discount_testing_imputed_invoice_line_item_df.loc[mask1, 'discount_category'] = "Negative_sum"
 
-# Second condition: sum_off_per_unit (exact match OR rounded to 2 decimals, exclude mask0 rows)
-mask2 = (
-    (
-        (discount_testing_imputed_invoice_line_item_df['line_net_amt_received'] == 
-         (discount_testing_imputed_invoice_line_item_df['quantity'] * 
-          (discount_testing_imputed_invoice_line_item_df['unit_gross_amt_received'] - 
-           discount_testing_imputed_invoice_line_item_df['discount_offered'])))
-        |
-        (discount_testing_imputed_invoice_line_item_df['line_net_amt_received'].round(2) == 
-         (discount_testing_imputed_invoice_line_item_df['quantity'] * 
-          (discount_testing_imputed_invoice_line_item_df['unit_gross_amt_received'] - 
-           discount_testing_imputed_invoice_line_item_df['discount_offered'])).round(2))
-    ) &
-    (~mask0)  # Exclude rows already marked as No_info
+x_for_1_df = save_and_summarize(
+    no_flags_df, 
+    x_for_1_mask, 
+    'testing.csv',
+    'x_for_1'
 )
- 
+
+# Check the math to calculate undiscounted price. line_gross_amt_derived is assumed to be undiscounted price
+x_for_1_df['check_relationship'] = np.isclose(
+    x_for_1_df['unit_gross_amt_received'] * (x_for_1_df['discount_offered'] / 100 - 1) * -1,
+    x_for_1_df['line_net_amt_received'],
+    atol=0.01
+)
+
+# Check if two columns are the same
+x_for_1_df['check_same'] = (
+    x_for_1_df['unit_gross_amt_received'].round(2) == x_for_1_df['line_gross_amt_received'].round(2)
+)
+
+calculate_percentage_true(x_for_1_df, 'check_same')
+# They are same
+
+x_for_1_df.to_csv('testing.csv', index=False)
+
+percentage_true = calculate_percentage_true(x_for_1_df, 'check_relationship')
+print(f"Percentage where relationship holds true: {percentage_true:.2f}%")
+# 99.38%
+
+# Filter for lines where check_relationship is TRUE
+x_for_1_check_true_mask = (
+    x_for_1_df['check_relationship'] == True
+)
+
+x_for_1_check_true_df = save_and_summarize(
+    x_for_1_df, 
+    x_for_1_check_true_mask, 
+    'testing.csv',
+    'x_for_1_check_true'
+)
+
+# Set the main delivery columns
+x_for_1_check_true_df['undiscounted_price'] = x_for_1_check_true_df['line_net_amt_received']
+x_for_1_check_true_df['discounted_price'] = x_for_1_check_true_df['line_gross_amt_received']
+x_for_1_check_true_df['flag'] = 'x_for_1' 
+
+# Save to CSV
+x_for_1_check_true_df.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD x_for_1 FLAG TO MAIN DATAFRAME
+# ============================================================================================================
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    x_for_1_check_true_df, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 100,061 rows, or 17.20% flagged
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER OUT amt_off_total FROM imputed_invoice_line_item_df
+# ============================================================================================================
+
+# Filter for lines where discount_offered is recorded as a percentage to take off
+amt_off_total_mask = (
+    np.isclose(
+        no_flags_df['line_gross_amt_derived'] - no_flags_df['line_discount_derived'],
+        no_flags_df['line_net_amt_derived'],
+        atol=0.01
+        ) &
+        no_flags_df['discount_offered'].notnull()
+)
+
+amt_off_total_df = save_and_summarize(
+    no_flags_df, 
+    amt_off_total_mask, 
+    'testing.csv',
+    'amt_off_total'
+)
+
+# no need to check math this time
+
+# Set the main delivery columns
+amt_off_total_df['undiscounted_price'] = amt_off_total_df['line_gross_amt_derived']
+amt_off_total_df['discounted_price'] = amt_off_total_df['line_net_amt_derived']
+amt_off_total_df['flag'] = 'amt_off_total' 
+
+# Save to CSV
+amt_off_total_df.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD amt_off_total FLAG TO MAIN DATAFRAME
+# ============================================================================================================
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    amt_off_total_df, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 237,814 rows or 40.88% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER for discount_offered = null, found line_discount_derived notnull instead
+# ============================================================================================================
+
+amt_off_total_derived_mask = (
+    no_flags_df['discount_offered'].isna()
+)
+
+amt_off_total_derived_df = save_and_summarize(
+    no_flags_df, 
+    amt_off_total_derived_mask, 
+    'testing.csv',
+    'discount_null'
+)
+
+# Check the math to calculate undiscounted price. line_gross_amt_derived is assumed to be undiscounted price
+amt_off_total_derived_df['check_relationship'] = np.isclose(
+    amt_off_total_derived_df['line_net_amt_derived'] + amt_off_total_derived_df['line_discount_derived'],
+    amt_off_total_derived_df['line_gross_amt_derived'],
+    atol=0.01
+)
+
+percentage_true = calculate_percentage_true(amt_off_total_derived_df, 'check_relationship')
+print(f"Percentage where relationship holds true: {percentage_true:.2f}%")
+# 30.00%
+
+# Save to CSV
+amt_off_total_derived_df.to_csv('testing.csv', index=False)
+
+# Filter for lines where check_relationship is TRUE
+amt_off_total_derived_mask = (
+    amt_off_total_derived_df['check_relationship'] == True
+)
+
+amt_off_total_derived_df = save_and_summarize(
+    amt_off_total_derived_df, 
+    amt_off_total_derived_mask, 
+    'testing.csv',
+    'x_for_1_check_true'
+)
+
+# Set the main delivery columns
+amt_off_total_derived_df['undiscounted_price'] = amt_off_total_derived_df['line_gross_amt_derived']
+amt_off_total_derived_df['discounted_price'] = amt_off_total_derived_df['line_net_amt_derived']
+amt_off_total_derived_df['flag'] = 'amt_off_total' 
+
+# Save to CSV
+amt_off_total_derived_df.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD amt_off_total FLAG TO MAIN DATAFRAME
+# ============================================================================================================
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    amt_off_total_derived_df, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 339,358 rows or 58.34% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER for discount_offered.isnull() AND line_discount_derived.isnull()
+# ============================================================================================================
+
+discount_null_assumed_zero_mask = (
+    no_flags_df['discount_offered'].isna() &
+    no_flags_df['line_discount_derived'].isna()
+)
+
+discount_null_assumed_zero_df = save_and_summarize(
+    no_flags_df, 
+    discount_null_assumed_zero_mask, 
+    'testing.csv',
+    'discounts_null'
+)
+
+# seems like a pattern where a bunch of rows have only quantity and line_gross_amt_received
+# therefore just use line_gross_amt_received as the undiscounted price
+fuel_no_discount_mask = (
+    discount_null_assumed_zero_df['line_gross_amt_derived'].isna() &
+    discount_null_assumed_zero_df['line_net_amt_derived'].isna() &
+    discount_null_assumed_zero_df['unit_gross_amt_derived'].isna() &
+    discount_null_assumed_zero_df['line_net_amt_received'].isna() &
+    discount_null_assumed_zero_df['quantity'].notnull() &
+    discount_null_assumed_zero_df['line_gross_amt_received'].notnull()
+)
+
+fuel_no_discount_df = save_and_summarize(
+    discount_null_assumed_zero_df, 
+    fuel_no_discount_mask, 
+    'testing.csv',
+    'fuel_no_discount'
+)
+
+# Inspect dataframe
+results = analyze_dataframe(
+    fuel_no_discount_df, 
+    df_name='stats', 
+    output_filename='stats.csv'
+)
+# no others values columns have any information
+
+# Set the main delivery columns
+fuel_no_discount_df['undiscounted_price'] = fuel_no_discount_df['line_gross_amt_received']
+fuel_no_discount_df['discounted_price'] = fuel_no_discount_df['line_gross_amt_received']
+fuel_no_discount_df['flag'] = 'discount_assumed_zero' 
+
+# Save to CSV
+fuel_no_discount_df.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD amt_off_total FLAG TO MAIN DATAFRAME
+# ============================================================================================================
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    fuel_no_discount_df, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 538,990 rows or 92.66% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
