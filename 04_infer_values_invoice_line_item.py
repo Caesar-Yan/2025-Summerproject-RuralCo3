@@ -1,4 +1,8 @@
 
+
+# THIS IS OLD CODE THAT IS NOT IN USE ANYMORE IF YOU HAVE IT, PLEASE DELETE
+
+
 import json
 import re
 from pathlib import Path

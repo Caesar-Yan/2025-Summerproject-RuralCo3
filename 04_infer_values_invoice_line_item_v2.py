@@ -365,23 +365,37 @@ percentage_true = calculate_percentage_true(discount_zero_df, 'check_relationshi
 print(f"Percentage where relationship holds true: {percentage_true:.2f}%")
 # 85.68%
 
+# mask to select only rows with true values for relationship
+relationship_true_mask = (
+    discount_zero_df['check_relationship'] == True
+)
+
+relationship_true_df = save_and_summarize(
+    discount_zero_df, 
+    relationship_true_mask, 
+    'testing.csv',
+    'relationship_true_df'
+)
+
 # Set the main delivery columns
-discount_zero_df['undiscounted_price'] = discount_zero_df['line_gross_amt_received']
-discount_zero_df['discounted_price'] = discount_zero_df['undiscounted_price']
-discount_zero_df['flag'] = 'discount_zero' 
+relationship_true_df['undiscounted_price'] = relationship_true_df['line_gross_amt_received']
+relationship_true_df['discounted_price'] = relationship_true_df['undiscounted_price']
+relationship_true_df['flag'] = 'discount_zero' 
 
 # Save to CSV
-discount_zero_df.to_csv('testing.csv', index=False)
+relationship_true_df.to_csv('testing.csv', index=False)
 
 # ============================================================================================================
 # ADD discount_zero FLAG TO MAIN DATAFRAME
 
 merge_updates_to_main_df(
     imputed_invoice_line_item_df, 
-    discount_zero_df, 
+    relationship_true_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 71,625 rows, or 12.31% flagged
+# Non-null undiscounted_price values: 61,370 (10.55%)
+# Non-null discounted_price values: 61,370 (10.55%)
+# Non-null flag values: 61,370 (10.55%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -486,7 +500,9 @@ merge_updates_to_main_df(
     percentage_off_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 94,162 rows, or 16.19% flagged
+# Non-null undiscounted_price values: 83,907 (14.42%)
+# Non-null discounted_price values: 83,907 (14.42%)
+# Non-null flag values: 83,907 (14.42%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -542,7 +558,7 @@ negative_sum_check_true_df = save_and_summarize(
 
 # Set the main delivery columns
 negative_sum_check_true_df['undiscounted_price'] = negative_sum_check_true_df['line_gross_amt_received']
-negative_sum_check_true_df['discounted_price'] = negative_sum_check_true_df['line_net_amt_derived']
+negative_sum_check_true_df['discounted_price'] = negative_sum_check_true_df['line_net_amt_received']
 negative_sum_check_true_df['flag'] = 'negative_sum_off' 
 
 # Save to CSV
@@ -556,7 +572,9 @@ merge_updates_to_main_df(
     negative_sum_check_true_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 95,061 rows, or 16.34% flagged
+# Non-null undiscounted_price values: 84,806 (14.58%)
+# Non-null discounted_price values: 84,806 (14.58%)
+# Non-null flag values: 84,806 (14.58%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -609,7 +627,7 @@ print(f"Percentage where relationship holds true: {percentage_true:.2f}%")
 
 # Filter for lines where check_relationship is TRUE
 x_for_1_check_true_mask = (
-    x_for_1_df['check_relationship'] == True
+    x_for_1_df['check_relationship']
 )
 
 x_for_1_check_true_df = save_and_summarize(
@@ -635,7 +653,9 @@ merge_updates_to_main_df(
     x_for_1_check_true_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 100,061 rows, or 17.20% flagged
+# Non-null undiscounted_price values: 89,806 (15.44%)
+# Non-null discounted_price values: 89,806 (15.44%)
+# Non-null flag values: 89,806 (15.44%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -687,7 +707,9 @@ merge_updates_to_main_df(
     amt_off_total_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 237,814 rows or 40.88% done
+# Non-null undiscounted_price values: 237,539 (40.84%)
+# Non-null discounted_price values: 237,539 (40.84%)
+# Non-null flag values: 237,539 (40.84%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -757,7 +779,9 @@ merge_updates_to_main_df(
     amt_off_total_derived_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 339,358 rows or 58.34% done
+# Non-null undiscounted_price values: 339,083 (58.29%)
+# Non-null discounted_price values: 339,083 (58.29%)
+# Non-null flag values: 339,083 (58.29%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -821,14 +845,16 @@ fuel_no_discount_df['flag'] = 'discount_assumed_zero'
 fuel_no_discount_df.to_csv('testing.csv', index=False)
 
 # ============================================================================================================
-# ADD amt_off_total FLAG TO MAIN DATAFRAME
+# ADD discount_assumed_zero FLAG TO MAIN DATAFRAME
 
 merge_updates_to_main_df(
     imputed_invoice_line_item_df, 
     fuel_no_discount_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 538,990 rows or 92.66% done
+# Non-null undiscounted_price values: 538,715 (92.61%)
+# Non-null discounted_price values: 538,715 (92.61%)
+# Non-null flag values: 538,715 (92.61%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -874,7 +900,9 @@ merge_updates_to_main_df(
     free_gift_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 539,002 rows or 92.66% done
+# Non-null undiscounted_price values: 538,727 (92.61%)
+# Non-null discounted_price values: 538,727 (92.61%)
+# Non-null flag values: 538,727 (92.61%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -919,7 +947,9 @@ merge_updates_to_main_df(
     amt_off_total_df2, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 539,465 rows or 92.74% done
+# Non-null undiscounted_price values: 539,190 (92.69%)
+# Non-null discounted_price values: 539,190 (92.69%)
+# Non-null flag values: 539,190 (92.69%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -958,7 +988,7 @@ print(f"All equal? {check_equal.all()}")
 
 # Set the main delivery columns
 discount_assumed_zero_df2['undiscounted_price'] = discount_assumed_zero_df2['line_net_amt_derived']
-discount_assumed_zero_df2['discounted_price'] = discount_assumed_zero_df2['discounted_price']
+discount_assumed_zero_df2['discounted_price'] = discount_assumed_zero_df2['undiscounted_price']
 discount_assumed_zero_df2['flag'] = 'discount_assumed_zero' 
 
 # Save to CSV
@@ -972,7 +1002,9 @@ merge_updates_to_main_df(
     discount_assumed_zero_df2, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 541,940 rows or 93.17% done
+# Non-null undiscounted_price values: 541,665 (93.12%)
+# Non-null discounted_price values: 541,665 (93.12%)
+# Non-null flag values: 541,665 (93.12%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1021,7 +1053,9 @@ merge_updates_to_main_df(
     percetange_off_df2, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 546,091 rows or 93.88% done
+# Non-null undiscounted_price values: 545,818 (93.83%)
+# Non-null discounted_price values: 545,818 (93.83%)
+# Non-null flag values: 545,818 (93.83%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1069,7 +1103,9 @@ merge_updates_to_main_df(
     amt_off_total3_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 546,434 rows or 93.94% done
+# Non-null undiscounted_price values: 546,161 (93.89%)
+# Non-null discounted_price values: 546,161 (93.89%)
+# Non-null flag values: 546,161 (93.89%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1119,7 +1155,9 @@ merge_updates_to_main_df(
     negative_sum_off_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 546,772 rows or 94.00% done
+# Non-null undiscounted_price values: 546,501 (93.95%)
+# Non-null discounted_price values: 546,501 (93.95%)
+# Non-null flag values: 546,501 (93.95%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1167,7 +1205,9 @@ merge_updates_to_main_df(
     percentage_off_df3, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 546,910 rows or 94.02% done
+# Non-null undiscounted_price values: 546,706 (93.98%)
+# Non-null discounted_price values: 546,706 (93.98%)
+# Non-null flag values: 546,706 (93.98%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1216,7 +1256,9 @@ merge_updates_to_main_df(
     negative_price_no_discount_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 546,994 rows or 94.03% done
+# Non-null undiscounted_price values: 546,790 (94.00%)
+# Non-null discounted_price values: 546,790 (94.00%)
+# Non-null flag values: 546,790 (94.00%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1279,7 +1321,9 @@ merge_updates_to_main_df(
     discount_zero_df3, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 547,426 rows or 94.11% done
+# Non-null undiscounted_price values: 547,222 (94.07%)
+# Non-null discounted_price values: 547,222 (94.07%)
+# Non-null flag values: 547,222 (94.07%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1330,8 +1374,8 @@ print(f"All values true? {all_true}")
 free_gift_df2.to_csv('testing.csv', index=False)
 
 # Set the main delivery columns
-free_gift_df2['undiscounted_price'] = discount_zero_df3['discount_type']
-free_gift_df2['discounted_price'] = discount_zero_df3['line_net_amt_derived']
+free_gift_df2['undiscounted_price'] = free_gift_df2['discount_type']
+free_gift_df2['discounted_price'] = free_gift_df2['line_net_amt_derived']
 free_gift_df2['flag'] = 'free_gift' 
 
 # Save to CSV
@@ -1345,7 +1389,9 @@ merge_updates_to_main_df(
     free_gift_df2, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 548,154 rows or 94.23% done
+# Non-null undiscounted_price values: 547,950 (94.20%)
+# Non-null discounted_price values: 547,950 (94.20%)
+# Non-null flag values: 547,950 (94.20%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1394,14 +1440,16 @@ discount_zero_df4['flag'] = 'discount_zero'
 discount_zero_df4.to_csv('testing.csv', index=False)
 
 # ============================================================================================================
-# ADD free_gift2 FLAG TO MAIN DATAFRAME
+# ADD discount_zero4 FLAG TO MAIN DATAFRAME
 
 merge_updates_to_main_df(
     imputed_invoice_line_item_df, 
     discount_zero_df4, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 548,618 rows or 94.31% done
+# Non-null undiscounted_price values: 548,414 (94.28%)
+# Non-null discounted_price values: 548,414 (94.28%)
+# Non-null flag values: 548,414 (94.28%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1441,14 +1489,16 @@ complimentary_df['flag'] = 'complimentary'
 complimentary_df.to_csv('testing.csv', index=False)
 
 # ============================================================================================================
-# ADD free_gift2 FLAG TO MAIN DATAFRAME
+# ADD complimentary FLAG TO MAIN DATAFRAME
 
 merge_updates_to_main_df(
     imputed_invoice_line_item_df, 
     complimentary_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 548,775 rows or 94.34% done
+# Non-null undiscounted_price values: 548,571 (94.31%)
+# Non-null discounted_price values: 548,571 (94.31%)
+# Non-null flag values: 548,571 (94.31%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1493,7 +1543,9 @@ merge_updates_to_main_df(
     complimentary_df2, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 557,180 rows or 95.79% done
+# Non-null undiscounted_price values: 556,985 (95.75%)
+# Non-null discounted_price values: 556,985 (95.75%)
+# Non-null flag values: 556,985 (95.75%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1539,7 +1591,9 @@ merge_updates_to_main_df(
     complimentary_df3, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 557,826 rows or 95.90% done
+# Non-null undiscounted_price values: 557,631 (95.86%)
+# Non-null discounted_price values: 557,631 (95.86%)
+# Non-null flag values: 557,631 (95.86%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1577,14 +1631,16 @@ no_info_assumed_zero_df['flag'] = 'no_info_assumed_zero'
 no_info_assumed_zero_df.to_csv('testing.csv', index=False)
 
 # ============================================================================================================
-# ADD no_price FLAG TO MAIN DATAFRAME
+# ADD no_info_assumed_zero FLAG TO MAIN DATAFRAME
 
 merge_updates_to_main_df(
     imputed_invoice_line_item_df, 
     no_info_assumed_zero_df, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 559,775 rows or 96.32% done
+# Non-null undiscounted_price values: 559,580 (96.20%)
+# Non-null discounted_price values: 559,580 (96.20%)
+# Non-null flag values: 559,580 (96.20%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1628,7 +1684,9 @@ merge_updates_to_main_df(
     no_info_assumed_zero_df2, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 560,171 rows or 96.30% done
+# Non-null undiscounted_price values: 559,976 (96.27%)
+# Non-null discounted_price values: 559,976 (96.27%)
+# Non-null flag values: 559,976 (96.27%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1677,14 +1735,16 @@ stragglers_df2['flag'] = 'amt_off_total'
 stragglers_df2.to_csv('testing.csv', index=False)
 
 # ============================================================================================================
-# ADD no_price FLAG TO MAIN DATAFRAME
+# ADD amt_off_total FLAG TO MAIN DATAFRAME
 
 merge_updates_to_main_df(
     imputed_invoice_line_item_df, 
     stragglers_df2, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 560,175 rows or 96.30% done
+# Non-null undiscounted_price values: 559,980 (96.27%)
+# Non-null discounted_price values: 559,980 (96.27%)
+# Non-null flag values: 559,980 (96.27%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1740,7 +1800,9 @@ merge_updates_to_main_df(
     stragglers_df2, 
     ['undiscounted_price', 'discounted_price', 'flag']
 )
-# 560,175 rows or 96.30% done
+# Non-null undiscounted_price values: 559,980 (96.27%)
+# Non-null discounted_price values: 559,980 (96.27%)
+# Non-null flag values: 559,980 (96.27%)
 
 # Save to CSV
 imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
@@ -1752,3 +1814,268 @@ no_flags_mask = (
 no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
 no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER for the remaining weird relationship - quantity.notnull()
+# ============================================================================================================
+
+stragglers_mask5 = (
+    no_flags_df['line_gross_amt_derived'].notnull()
+)
+
+stragglers_df5 = save_and_summarize(
+    no_flags_df, 
+    stragglers_mask5, 
+    'testing.csv',
+    'stragglers_df5'
+)
+
+discount_applied_already_mask = (
+    stragglers_df5['line_discount_derived'].notnull() &
+    (stragglers_df5['line_discount_derived'] > 0)
+)
+
+stragglers_df6 = save_and_summarize(
+    stragglers_df5, 
+    discount_applied_already_mask, 
+    'testing2.csv',
+    'stragglers_df6'
+)
+
+# Set the main delivery columns
+stragglers_df6['undiscounted_price'] = stragglers_df6['line_gross_amt_derived']
+stragglers_df6['discounted_price'] = stragglers_df6['line_net_amt_received']
+stragglers_df6['flag'] = 'percentage_off' 
+
+# Save to CSV
+stragglers_df6.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    stragglers_df6, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# Non-null undiscounted_price values: 559,983 (96.27%)
+# Non-null discounted_price values: 559,983 (96.27%)
+# Non-null flag values: 559,983 (96.27%)
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+
+# ============================================================================================================
+# FILTER for the remaining weird relationship - quantity.notnull()
+# ============================================================================================================
+
+stragglers_mask7 = (
+    no_flags_df['line_gross_amt_derived'].notnull() & 
+    (no_flags_df['discount_offered'] == 0)
+)
+
+stragglers_df7 = save_and_summarize(
+    no_flags_df, 
+    stragglers_mask7, 
+    'testing.csv',
+    'stragglers_df7'
+)
+
+# Set the main delivery columns
+stragglers_df7['undiscounted_price'] = stragglers_df7['line_gross_amt_derived']
+stragglers_df7['discounted_price'] = stragglers_df7['undiscounted_price']
+stragglers_df7['flag'] = 'discount_zero' 
+
+# Save to CSV
+stragglers_df7.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    stragglers_df7, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# Non-null undiscounted_price values: 559,991 (96.27%)
+# Non-null discounted_price values: 559,991 (96.27%)
+# Non-null flag values: 559,991 (96.27%)
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER for the remaining weird relationship - quantity.notnull()
+# ============================================================================================================
+
+stragglers_mask9 = (
+    no_flags_df['line_gross_amt_derived'].notnull()
+)
+
+stragglers_df9 = save_and_summarize(
+    no_flags_df, 
+    stragglers_mask9, 
+    'testing.csv',
+    'stragglers_df9'
+)
+
+# there is another case of weird discount_offered format here, but trust my math
+
+# Set the main delivery columns
+stragglers_df9['undiscounted_price'] = stragglers_df9['line_net_amt_received']
+stragglers_df9['discounted_price'] = stragglers_df9['line_gross_amt_received']
+stragglers_df9['flag'] = 'discount_zero' 
+
+# Save to CSV
+stragglers_df9.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    stragglers_df9, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# Non-null undiscounted_price values: 559,993 (96.27%)
+# Non-null discounted_price values: 559,993 (96.27%)
+# Non-null flag values: 559,993 (96.27%)
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER for the remaining weird relationship - quantity.notnull()
+# ============================================================================================================
+
+stragglers_mask10 = (
+    (no_flags_df['discount_type'] == 'T') &
+    (~no_flags_df['description'].str.contains(r'\d', na=False, regex=True))
+)
+
+stragglers_df10 = save_and_summarize(
+    no_flags_df, 
+    stragglers_mask10, 
+    'testing.csv',
+    'stragglers_df10'
+)
+
+# there is another case of weird discount_offered format here, but trust my math
+
+# Set the main delivery columns
+stragglers_df10['undiscounted_price'] = stragglers_df10['unit_gross_amt_received']
+stragglers_df10['discounted_price'] = stragglers_df10['undiscounted_price']
+stragglers_df10['flag'] = 'no_price_info' 
+
+# Save to CSV
+stragglers_df10.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    stragglers_df10, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# Non-null undiscounted_price values: 560,178 (96.30%)
+# Non-null discounted_price values: 560,178 (96.30%)
+# Non-null flag values: 560,178 (96.30%)
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+
+# ============================================================================================================
+# FILTER for the remaining weird relationship - quantity.notnull()
+# ============================================================================================================
+
+stragglers_mask11 = (
+    (no_flags_df['discount_type'] == 'T')
+)
+
+stragglers_df11 = save_and_summarize(
+    no_flags_df, 
+    stragglers_mask11, 
+    'testing.csv',
+    'stragglers_df11'
+)
+
+# parse out amount from description
+stragglers_df11['price'] = (
+    stragglers_df11['description']
+    .str.replace('$', '', regex=False)
+    .str.replace(',', '', regex=False)
+    .astype(float)
+)
+
+# Save to CSV
+stragglers_df11.to_csv('testing.csv', index=False)
+
+# Set the main delivery columns
+stragglers_df11['undiscounted_price'] = stragglers_df11['price']
+stragglers_df11['discounted_price'] = stragglers_df11['undiscounted_price']
+stragglers_df11['flag'] = 'no_price_info' 
+
+# Save to CSV
+stragglers_df11.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    stragglers_df11, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# Non-null undiscounted_price values: 560,178 (96.30%)
+# Non-null discounted_price values: 560,178 (96.30%)
+# Non-null flag values: 560,178 (96.30%)
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# cleaning finished!
+# the completion is not at 100.00%, but the rest of the rows are the summary line of invoices, so adds no extra information
+

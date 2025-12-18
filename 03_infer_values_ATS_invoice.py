@@ -6,6 +6,11 @@
 # failed_accounts_df = all_data.get('failed_accounts')
 # merchant_discount_df = all_data.get('merchant_discount')
 
+
+
+
+# THIS IS OLD CODE THAT IS NOT IN USE ANYMORE IF YOU HAVE IT, PLEASE DELETE
+
 import json
 import re
 from pathlib import Path
