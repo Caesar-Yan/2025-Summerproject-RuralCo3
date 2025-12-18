@@ -1461,3 +1461,294 @@ no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
 no_flags_df.to_csv('no_flags_df.csv', index=False)
 
+# ============================================================================================================
+# FILTER for no_price (discount_type == T) assuming T here means total
+# ============================================================================================================
+
+complimentary_mask2 = (
+    (no_flags_df['discount_type'] == 'T') &
+    (no_flags_df['line_net_amt_derived'] == 0)
+)
+
+complimentary_df2 = save_and_summarize(
+    no_flags_df, 
+    complimentary_mask2, 
+    'testing.csv',
+    'complimentary_df2'
+)
+
+# Set the main delivery columns
+complimentary_df2['undiscounted_price'] = complimentary_df2['line_net_amt_derived']
+complimentary_df2['discounted_price'] = complimentary_df2['line_net_amt_derived']
+complimentary_df2['flag'] = 'no_price' 
+
+# Save to CSV
+complimentary_df2.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    complimentary_df2, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 557,180 rows or 95.79% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+
+# ============================================================================================================
+# FILTER for complimentary (with discount_offered = 1, assuming this means rate of 1)
+# ============================================================================================================
+
+complimentary_mask3 = (
+    (no_flags_df['discount_offered'] == 1) &
+    (no_flags_df['line_net_amt_derived'] == 0)
+)
+
+complimentary_df3 = save_and_summarize(
+    no_flags_df, 
+    complimentary_mask3, 
+    'testing.csv',
+    'complimentary_df3'
+)
+
+# Set the main delivery columns
+complimentary_df3['undiscounted_price'] = complimentary_df3['line_gross_amt_received']
+complimentary_df3['discounted_price'] = complimentary_df3['line_net_amt_derived']
+complimentary_df3['flag'] = 'complimentary' 
+
+# Save to CSV
+complimentary_df3.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    complimentary_df3, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 557,826 rows or 95.90% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+
+# ============================================================================================================
+# FILTER for only information is zero somewhere, flagged as no_info_assumed_zero
+# ============================================================================================================
+
+no_info_assumed_zero_mask = (
+    no_flags_df['line_net_amt_derived'] == 0
+)
+
+no_info_assumed_zero_df = save_and_summarize(
+    no_flags_df, 
+    no_info_assumed_zero_mask, 
+    'testing.csv',
+    'no_info_assumed_zero_df'
+)
+
+# Set the main delivery columns
+no_info_assumed_zero_df['undiscounted_price'] = no_info_assumed_zero_df['line_net_amt_derived']
+no_info_assumed_zero_df['discounted_price'] = no_info_assumed_zero_df['undiscounted_price']
+no_info_assumed_zero_df['flag'] = 'no_info_assumed_zero' 
+
+# Save to CSV
+no_info_assumed_zero_df.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    no_info_assumed_zero_df, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 559,775 rows or 96.32% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER for only information is zero somewhere, flagged as no_info_assumed_zero
+# ============================================================================================================
+
+no_info_assumed_zero_mask2 = (
+    no_flags_df['line_discount_derived'] == 0
+)
+
+no_info_assumed_zero_df2 = save_and_summarize(
+    no_flags_df, 
+    no_info_assumed_zero_mask2, 
+    'testing.csv',
+    'no_info_assumed_zero_df2'
+)
+
+# Set the main delivery columns
+no_info_assumed_zero_df2['undiscounted_price'] = no_info_assumed_zero_df2['line_discount_derived']
+no_info_assumed_zero_df2['discounted_price'] = no_info_assumed_zero_df2['undiscounted_price']
+no_info_assumed_zero_df2['flag'] = 'no_info_assumed_zero' 
+
+# Save to CSV
+no_info_assumed_zero_df2.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    no_info_assumed_zero_df2, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 560,171 rows or 96.30% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER for the remaining weird relationship - quantity.notnull()
+# ============================================================================================================
+
+stragglers_mask = (
+    no_flags_df['quantity'].notnull()
+)
+
+stragglers_df = save_and_summarize(
+    no_flags_df, 
+    stragglers_mask, 
+    'testing.csv',
+    'stragglers_df'
+)
+
+stragglers_mask2 = (
+    (stragglers_df['line_gross_amt_derived'] + stragglers_df['line_discount_derived'] == 
+    stragglers_df['line_net_amt_derived'])
+)
+
+stragglers_df2 = save_and_summarize(
+    stragglers_df, 
+    stragglers_mask2, 
+    'testing2.csv',
+    'stragglers_df2'
+)
+
+# Set the main delivery columns
+stragglers_df2['undiscounted_price'] = stragglers_df2['line_net_amt_derived']
+stragglers_df2['discounted_price'] = stragglers_df2['line_gross_amt_derived']
+stragglers_df2['flag'] = 'amt_off_total' 
+
+# Save to CSV
+stragglers_df2.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    stragglers_df2, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 560,175 rows or 96.30% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
+
+# ============================================================================================================
+# FILTER for the remaining weird relationship - quantity.notnull()
+# ============================================================================================================
+
+stragglers_mask3 = (
+    no_flags_df['quantity'].notnull()
+)
+
+stragglers_df3 = save_and_summarize(
+    no_flags_df, 
+    stragglers_mask3, 
+    'testing.csv',
+    'stragglers_df3'
+)
+
+stragglers_mask4 = (
+    (stragglers_df['line_gross_amt_derived'] + stragglers_df['line_discount_derived'] == 
+    stragglers_df['line_net_amt_derived'])
+)
+
+stragglers_df2 = save_and_summarize(
+    stragglers_df, 
+    stragglers_mask2, 
+    'testing2.csv',
+    'stragglers_df2'
+)
+
+# Set the main delivery columns
+stragglers_df2['undiscounted_price'] = stragglers_df2['line_net_amt_derived']
+stragglers_df2['discounted_price'] = stragglers_df2['line_gross_amt_derived']
+stragglers_df2['flag'] = 'amt_off_total' 
+
+# Save to CSV
+stragglers_df2.to_csv('testing.csv', index=False)
+
+# ============================================================================================================
+# ADD no_price FLAG TO MAIN DATAFRAME
+
+merge_updates_to_main_df(
+    imputed_invoice_line_item_df, 
+    stragglers_df2, 
+    ['undiscounted_price', 'discounted_price', 'flag']
+)
+# 560,175 rows or 96.30% done
+
+# Save to CSV
+imputed_invoice_line_item_df.to_csv('imputed_invoice_line_item.csv', index=False, mode='w')
+
+no_flags_mask = (
+    imputed_invoice_line_item_df['flag'].isnull()
+)
+
+no_flags_df = imputed_invoice_line_item_df[no_flags_mask].copy()
+# Save to CSV
+no_flags_df.to_csv('no_flags_df.csv', index=False)
