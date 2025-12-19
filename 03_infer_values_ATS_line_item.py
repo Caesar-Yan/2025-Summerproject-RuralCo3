@@ -824,7 +824,7 @@ discount_regular_df['discounted_price'] = (discount_regular_df['undiscounted_pri
 discount_regular_df['flag'] = 'discount_regular' 
 
 # Save to CSV
-discount_regular_df.to_csv('testing.csv', index=False)
+discount_regular_df.to_csv('testing2.csv', index=False)
 
 # ============================================================================================================
 # ADD DISCOUNT_REGULAR COLUMNS TO MAIN DATAFRAME
