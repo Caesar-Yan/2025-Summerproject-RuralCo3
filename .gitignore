@@ -4,3 +4,6 @@ missing_values_summary.csv
 
 # ignore .pkl
 *.pkl
+
+# ignore graphs
+*.png
