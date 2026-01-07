@@ -48,7 +48,7 @@ else:
     print("✓ No violations found: discounted_price never exceeds undiscounted_price")
 
 
- ========================================================================
+#  ========================================================================
  # Check quantity validity
 invalid_quantity_df = imputed_ats_invoice_line_item_df[
     imputed_ats_invoice_line_item_df['quantity'] <= 0
@@ -60,7 +60,7 @@ if len(invalid_quantity_df) > 0:
     invalid_quantity_df.to_csv('invalid_quantity_rows.csv', index=False)
 
 
-=============================================================================== 
+# =============================================================================== 
 #Identify negative discount values, which should not occur under normal pricing rules.
 
 negative_discount_df = imputed_ats_invoice_line_item_df[
@@ -69,7 +69,7 @@ negative_discount_df = imputed_ats_invoice_line_item_df[
 
 print(f"Rows with discount_offered < 0: {len(negative_discount_df)}")
 
-=============================================================================
+# =============================================================================
 # Check net amount not exceeding gross amount
 
 invalid_net_gross_df = imputed_ats_invoice_line_item_df[
@@ -79,7 +79,7 @@ invalid_net_gross_df = imputed_ats_invoice_line_item_df[
 
 print(f"Rows where net > gross: {len(invalid_net_gross_df)}")
 
-===============================================================================
+# ===============================================================================
 # Verify line-level gross amount matches unit price × quantity (within rounding tolerance).
 
 gross_check_df = imputed_ats_invoice_line_item_df.copy()
@@ -100,7 +100,7 @@ gross_mismatch_df = gross_check_df[
 
 print(f"Rows with gross mismatch > 1 cent: {len(gross_mismatch_df)}")
 
-================================================================================
+# ================================================================================
 # Detect cases where discount exceeds gross amount (only valid for specific edge cases).
 
 over_discount_df = imputed_ats_invoice_line_item_df[
@@ -110,7 +110,7 @@ over_discount_df = imputed_ats_invoice_line_item_df[
 
 print(f"Rows where discount_offered > line_gross_amt_received: {len(over_discount_df)}")
 
-================================================================================
+# ================================================================================
 #  Validate consistency between pricing flags and their implied numeric relationships.
 
 regular_df = imputed_ats_invoice_line_item_df[
