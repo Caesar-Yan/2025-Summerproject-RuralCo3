@@ -1,6 +1,5 @@
 # ignore outputted CSVs
 *.csv
-missing_values_summary.csv
 
 # ignore .pkl
 *.pkl
