@@ -10,6 +10,28 @@ import dill
 with open('all_data.pkl', 'rb') as f:
     all_data = pickle.load(f)
 
+def get_next_20th(date):
+    """
+    Given a date, return the next 20th day.
+    - If date is on or before the 19th of the month, return 20th of same month
+    - If date is on or after the 20th, return 20th of next month
+    """
+    if pd.isna(date):
+        return pd.NaT
+    
+    date = pd.to_datetime(date)
+    
+    # If we're on or before the 19th, use this month's 20th
+    if date.day <= 19:
+        return date.replace(day=20)
+    # If we're on or after the 20th, go to next month's 20th
+    else:
+        if date.month == 12:
+            return date.replace(year=date.year + 1, month=1, day=20)
+        else:
+            return date.replace(month=date.month + 1, day=20)
+
+
 # Define base directories
 base_dir = Path("p:/Desktop/2025/data605/2025-Summerproject-RuralCo3")
 
@@ -279,3 +301,20 @@ print(f"Total rows: {len(datetime_parsed_invoice_line_item_df)}")
 print(f"Rows with valid transaction_date: {datetime_parsed_invoice_line_item_df['transaction_date'].notna().sum()}")
 print(f"Rows imputed from date_from_invoice: {null_mask.sum()}")
 print(f"Remaining nulls in date_imputed: {datetime_parsed_invoice_line_item_df['date_imputed'].isna().sum()}")
+
+
+# For ATS dataframe
+datetime_parsed_ats_invoice_line_item_df['invoice_period'] = datetime_parsed_ats_invoice_line_item_df['date_from_invoice'].apply(get_next_20th)
+
+# For Invoice dataframe
+datetime_parsed_invoice_line_item_df['invoice_period'] = datetime_parsed_invoice_line_item_df['date_from_invoice'].apply(get_next_20th)
+
+# Save the updated dataframes
+datetime_parsed_ats_invoice_line_item_df.to_csv('datetime_parsed_ats_invoice_line_item_df.csv', index=False)
+datetime_parsed_invoice_line_item_df.to_csv('datetime_parsed_invoice_line_item_df.csv', index=False)
+
+print("Invoice period column added successfully!")
+# print(f"\nATS Sample:")
+# print(datetime_parsed_ats_invoice_line_item_df[['date_from_invoice', 'invoice_period']].head(10))
+# print(f"\nInvoice Sample:")
+# print(datetime_parsed_invoice_line_item_df[['date_from_invoice', 'invoice_period']].head(10))
