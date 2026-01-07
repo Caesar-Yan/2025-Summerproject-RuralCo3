@@ -6,32 +6,32 @@ import pickle
 # TEMPORARY FILTER: remove obviously erroneous discount_regular rows
 # This block can be deleted later once the source data is corrected.
 # ================================================================
-raw_path = "imputed_ats_invoice_line_item.csv"
+# raw_path = "imputed_ats_invoice_line_item.csv"
 
-tmp = pd.read_csv(raw_path)
+# tmp = pd.read_csv(raw_path)
 
-# Ensure numeric dtype for comparison
-tmp["undiscounted_price"] = pd.to_numeric(tmp["undiscounted_price"], errors="coerce")
-tmp["discounted_price"] = pd.to_numeric(tmp["discounted_price"], errors="coerce")
+# # Ensure numeric dtype for comparison
+# tmp["undiscounted_price"] = pd.to_numeric(tmp["undiscounted_price"], errors="coerce")
+# tmp["discounted_price"] = pd.to_numeric(tmp["discounted_price"], errors="coerce")
 
-# Define extreme outliers:
-# - flag == 'discount_regular'
-# - undiscounted_price > 1,000,000 (clearly unrealistic compared to normal rows)
-extreme_mask = (
-    (tmp["flag"] == "discount_regular") &
-    (tmp["undiscounted_price"] > 1_000_000)
-)
+# # Define extreme outliers:
+# # - flag == 'discount_regular'
+# # - undiscounted_price > 1,000,000 (clearly unrealistic compared to normal rows)
+# extreme_mask = (
+#     (tmp["flag"] == "discount_regular") &
+#     (tmp["undiscounted_price"] > 1_000_000)
+# )
 
-n_extreme = extreme_mask.sum()
-print(f"Temporary filter: removed {n_extreme} discount_regular rows with undiscounted_price > 1,000,000 before benefit calculation.")
+# n_extreme = extreme_mask.sum()
+# print(f"Temporary filter: removed {n_extreme} discount_regular rows with undiscounted_price > 1,000,000 before benefit calculation.")
 
-# Save removed rows for auditing
-if n_extreme > 0:
-    tmp.loc[extreme_mask].to_csv("discount_regular_extreme_removed.csv", index=False)
+# # Save removed rows for auditing
+# if n_extreme > 0:
+#     tmp.loc[extreme_mask].to_csv("discount_regular_extreme_removed.csv", index=False)
 
-# Keep only reasonable rows and overwrite the original CSV
-tmp = tmp[~extreme_mask].copy()
-tmp.to_csv(raw_path, index=False)
+# # Keep only reasonable rows and overwrite the original CSV
+# tmp = tmp[~extreme_mask].copy()
+# tmp.to_csv(raw_path, index=False)
 
 # ================================================================
 # Load all_data.pkl so ATS invoice metadata (due_date, etc.) is available
