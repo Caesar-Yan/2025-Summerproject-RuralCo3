@@ -2,77 +2,56 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from datetime import datetime, timedelta
+import pickle
 
 # ================================================================
 # CONFIGURATION
 # ================================================================
-BREAKEVEN_TARGET = 1_043_000
-TARGET_DATE = pd.Timestamp("2025-03-31")  # Financial Year End 2025
-RANDOM_SEED = 42
-TOLERANCE = 1000  # How close to breakeven we need to be (in dollars)
-MAX_ITERATIONS = 50  # Maximum binary search iterations
-
-# Payment timing parameters
-GRACE_PERIOD_DAYS = 20  # No interest/fees if paid within 20 days
-NORMAL_PAYMENT_DAYS = 58.21  # Good customers from data
-DELINQUENT_PAYMENT_DAYS = 30  # Pay at next invoice period (1 month)
-SERIOUSLY_DELINQUENT_PAYMENT_DAYS = 90  # Pay at 3 months
-
-# Interest and fees
 ANNUAL_INTEREST_RATE = 0.2395  # 23.95% p.a.
-DAILY_INTEREST_RATE = ANNUAL_INTEREST_RATE / 365
-LATE_FEE_PER_INVOICE = 10.00
+LATE_FEE = 10.00  # $10 per late invoice
+RANDOM_SEED = 42
+FY2025_START = pd.Timestamp("2024-07-01")  # NZ Financial Year
+FY2025_END = pd.Timestamp("2025-06-30")
 
-# Delinquency split (from actual data)
-DELINQUENT_PROPORTION = 123 / 6075  # ~2.02%
-SERIOUSLY_DELINQUENT_PROPORTION = 58 / 6075  # ~0.95%
-TOTAL_DEFAULT_RATE_ACTUAL = DELINQUENT_PROPORTION + SERIOUSLY_DELINQUENT_PROPORTION  # ~2.97%
-
-# Interest calculation scenario
-INTEREST_SCENARIO = 'full_amount'  # or 'discounted_amount'
+# Note: invoice_period is already set to 20th of month (the due date)
+# Any payment after invoice_period is overdue
 
 # ================================================================
-# Load and clean data
+# Load invoice data
 # ================================================================
 print("="*70)
-print("FINDING DEFAULT RATE TO REACH BREAKEVEN BY END OF FY2025")
-print("WITH PAYMENT-BASED INTEREST AND LATE FEES")
+print("LOADING INVOICE DATA")
 print("="*70)
 
+# Load combined invoice data
 ats_grouped = pd.read_csv('ats_grouped_with_discounts.csv')
 invoice_grouped = pd.read_csv('invoice_grouped_with_discounts.csv')
 
-print(f"\nOriginal ATS data: {len(ats_grouped):,} invoices")
-print(f"Original Invoice data: {len(invoice_grouped):,} invoices")
+# Combine datasets
+ats_grouped['customer_type'] = 'ATS'
+invoice_grouped['customer_type'] = 'Invoice'
+combined_df = pd.concat([ats_grouped, invoice_grouped], ignore_index=True)
 
-# Filter outliers
-OUTLIER_THRESHOLD = 1_000_000
-ats_clean = ats_grouped[ats_grouped['discount_amount'] <= OUTLIER_THRESHOLD].copy()
-invoice_clean = invoice_grouped[invoice_grouped['discount_amount'] <= OUTLIER_THRESHOLD].copy()
-
-print(f"Cleaned ATS: {len(ats_clean):,} invoices")
-print(f"Cleaned Invoice: {len(invoice_clean):,} invoices")
-
-# Combine
-ats_clean['customer_type'] = 'ATS'
-invoice_clean['customer_type'] = 'Invoice'
-combined_df = pd.concat([ats_clean, invoice_clean], ignore_index=True)
+print(f"Total invoices loaded: {len(combined_df):,}")
 
 # ================================================================
-# Robust date parsing
+# Parse and filter dates for FY2025
 # ================================================================
 def parse_invoice_period(series: pd.Series) -> pd.Series:
-    """Robustly parse invoice_period."""
+    """Robustly parse invoice_period"""
     s = series.copy()
     s_str = s.astype(str).str.strip()
     s_str = s_str.replace({"nan": np.nan, "NaN": np.nan, "None": np.nan, "": np.nan})
     
+    # Handle YYYYMM format
     mask_yyyymm = s_str.str.fullmatch(r"\d{6}", na=False)
     out = pd.Series(pd.NaT, index=s.index)
     
     if mask_yyyymm.any():
         out.loc[mask_yyyymm] = pd.to_datetime(s_str.loc[mask_yyyymm], format="%Y%m", errors="coerce")
     
+    # Handle other formats
     mask_other = ~mask_yyyymm
     if mask_other.any():
         out.loc[mask_other] = pd.to_datetime(s_str.loc[mask_other], errors="coerce")
@@ -82,433 +61,420 @@ def parse_invoice_period(series: pd.Series) -> pd.Series:
 combined_df['invoice_period'] = parse_invoice_period(combined_df['invoice_period'])
 combined_df = combined_df[combined_df['invoice_period'].notna()].copy()
 
-# Hard filter to remove epoch-era junk
-min_valid = pd.Timestamp("2000-01-01")
-max_valid = pd.Timestamp("2035-12-31")
-combined_df = combined_df[(combined_df['invoice_period'] >= min_valid) & 
-                          (combined_df['invoice_period'] <= max_valid)].copy()
+# Filter to FY2025 only
+fy2025_df = combined_df[
+    (combined_df['invoice_period'] >= FY2025_START) & 
+    (combined_df['invoice_period'] <= FY2025_END)
+].copy()
 
-combined_df = combined_df.sort_values('invoice_period').reset_index(drop=True)
+print(f"FY2025 invoices ({FY2025_START.strftime('%Y-%m-%d')} to {FY2025_END.strftime('%Y-%m-%d')}): {len(fy2025_df):,}")
 
-# Calculate invoice amounts
-if 'invoice_amount' not in combined_df.columns:
-    print("\nCalculating invoice_amount from discount_amount (assuming 2% discount)...")
-    combined_df['invoice_amount'] = combined_df['discount_amount'] / 0.02
-else:
-    print("\nUsing 'invoice_amount' column from data")
-
-combined_df['discounted_invoice_amount'] = combined_df['invoice_amount'] - combined_df['discount_amount']
-
-# Filter to only include data up to end of FY2025
-combined_df_fy2025 = combined_df[combined_df['invoice_period'] <= TARGET_DATE].copy()
-print(f"\nInvoices through end of FY2025 (March 31, 2025): {len(combined_df_fy2025):,}")
-
-print(f"\nPayment configuration:")
-print(f"  Grace period: {GRACE_PERIOD_DAYS} days")
-print(f"  Interest rate: {ANNUAL_INTEREST_RATE*100:.2f}% p.a. ({DAILY_INTEREST_RATE*365*100:.4f}% daily)")
-print(f"  Late fee: ${LATE_FEE_PER_INVOICE} per invoice")
-print(f"  Interest scenario: {INTEREST_SCENARIO}")
+if len(fy2025_df) == 0:
+    print("\n⚠ WARNING: No invoices found in FY2025 period!")
+    print("Available date range in data:")
+    print(f"  Min: {combined_df['invoice_period'].min()}")
+    print(f"  Max: {combined_df['invoice_period'].max()}")
+    exit()
 
 # ================================================================
-# Function to calculate interest and late fees
+# Load payment timing profiles
 # ================================================================
-def calculate_payment_charges(payment_days, invoice_amount, grace_period=GRACE_PERIOD_DAYS):
-    """Calculate interest and late fees based on payment timing"""
-    if payment_days <= grace_period:
-        return {
-            'days_past_grace': 0,
-            'interest_charged': 0,
-            'late_fee': 0,
-            'total_charges': 0
+print("\n" + "="*70)
+print("LOADING PAYMENT TIMING PROFILES")
+print("="*70)
+
+try:
+    with open('payment_profiles/payment_profiles.pkl', 'rb') as f:
+        payment_profiles = pickle.load(f)
+    print(f"✓ Loaded {len(payment_profiles)} payment profiles")
+except FileNotFoundError:
+    print("⚠ Payment profiles not found. Run create_payment_profiles.py first.")
+    print("Using fallback: loading master dataset to create profiles on-the-fly...")
+    
+    # Fallback: load master dataset
+    file_path_master = r"t:\projects\2025\RuralCo\Data provided by RuralCo 20251202\RuralCo2\Clean Code\master_dataset_complete.parquet"
+    df_master = pd.read_parquet(file_path_master)
+    
+    # Create simple profile
+    payment_profiles = {
+        'overall': {
+            'mean': df_master['payment_days'].mean(),
+            'median': df_master['payment_days'].median(),
+            'std': df_master['payment_days'].std(),
+            'raw_data': df_master['payment_days'].dropna().values
         }
-    else:
-        days_past_grace = payment_days - grace_period
-        interest = invoice_amount * DAILY_INTEREST_RATE * days_past_grace
-        late_fee = LATE_FEE_PER_INVOICE
-        
-        return {
-            'days_past_grace': days_past_grace,
-            'interest_charged': interest,
-            'late_fee': late_fee,
-            'total_charges': interest + late_fee
-        }
+    }
+    print(f"✓ Created fallback profile with {len(payment_profiles['overall']['raw_data']):,} observations")
 
 # ================================================================
-# Function to calculate total revenue for a given default rate
+# Simulation function
 # ================================================================
-def calculate_revenue_at_date(df, default_rate, target_date, seed=RANDOM_SEED, 
-                              interest_scenario=INTEREST_SCENARIO):
+def simulate_invoice_payments_with_interest(invoices_df, payment_profile, discount_scenario):
     """
-    Calculate cumulative revenue (discount retained + interest + late fees) 
-    by a target date for a given default rate.
+    Simulate invoice payments and calculate revenue
     
-    Returns: (total_revenue, period_summary_df)
+    Parameters:
+    - invoices_df: DataFrame with invoice data
+    - payment_profile: Payment timing profile from historical data
+    - discount_scenario: 'with_discount' or 'no_discount'
+    
+    Returns:
+    - DataFrame with simulated payment details and revenue calculations
+    
+    Note: invoice_period is already the due date (20th of month)
     """
-    df_scenario = df.copy()
-    np.random.seed(seed)
+    np.random.seed(RANDOM_SEED)
     
-    n_invoices = len(df_scenario)
-    n_defaults = int(n_invoices * default_rate)
+    simulated = invoices_df.copy()
+    n_invoices = len(simulated)
     
-    # Split defaults into delinquency types proportionally
-    if n_defaults > 0:
-        seriously_delinquent_rate = SERIOUSLY_DELINQUENT_PROPORTION / TOTAL_DEFAULT_RATE_ACTUAL
-        n_seriously_delinquent = int(n_defaults * seriously_delinquent_rate)
-        n_delinquent = n_defaults - n_seriously_delinquent
-    else:
-        n_seriously_delinquent = 0
-        n_delinquent = 0
-    
-    # Randomly assign delinquency status
-    if n_defaults > 0:
-        default_indices = np.random.choice(df_scenario.index, size=n_defaults, replace=False)
-        
-        if n_seriously_delinquent > 0:
-            seriously_delinquent_indices = np.random.choice(default_indices, 
-                                                           size=n_seriously_delinquent, 
-                                                           replace=False)
-        else:
-            seriously_delinquent_indices = np.array([])
-        
-        delinquent_indices = np.setdiff1d(default_indices, seriously_delinquent_indices)
-    else:
-        default_indices = np.array([])
-        seriously_delinquent_indices = np.array([])
-        delinquent_indices = np.array([])
-    
-    # Initialize columns
-    df_scenario['paid_on_time'] = True
-    df_scenario['delinquency_type'] = 'Normal'
-    df_scenario['payment_days'] = NORMAL_PAYMENT_DAYS
-    
-    # Assign payment days based on delinquency type
-    if len(delinquent_indices) > 0:
-        df_scenario.loc[delinquent_indices, 'paid_on_time'] = False
-        df_scenario.loc[delinquent_indices, 'delinquency_type'] = 'Delinquent'
-        df_scenario.loc[delinquent_indices, 'payment_days'] = DELINQUENT_PAYMENT_DAYS
-    
-    if len(seriously_delinquent_indices) > 0:
-        df_scenario.loc[seriously_delinquent_indices, 'paid_on_time'] = False
-        df_scenario.loc[seriously_delinquent_indices, 'delinquency_type'] = 'Seriously Delinquent'
-        df_scenario.loc[seriously_delinquent_indices, 'payment_days'] = SERIOUSLY_DELINQUENT_PAYMENT_DAYS
-    
-    # Calculate discount retained
-    df_scenario['discount_retained'] = df_scenario.apply(
-        lambda row: row['discount_amount'] if not row['paid_on_time'] else 0, 
-        axis=1
+    # Simulate payment timing (days from invoice date)
+    raw_payment_days = np.random.choice(
+        payment_profile['raw_data'], 
+        size=n_invoices, 
+        replace=True
     )
     
-    # Determine which invoice amount to use for interest calculation
-    if interest_scenario == 'full_amount':
-        df_scenario['interest_base_amount'] = df_scenario['invoice_amount']
-    else:  # 'discounted_amount'
-        df_scenario['interest_base_amount'] = df_scenario['discounted_invoice_amount']
+    # Adjust payment days: subtract 20 and clip to minimum of 0
+    # This accounts for invoice_period already being set to the 20th (due date)
+    adjusted_payment_days = np.maximum(raw_payment_days - 20, 0)
+    simulated['simulated_payment_days'] = adjusted_payment_days
     
-    # Calculate interest and late fees
-    charges_list = []
-    for idx, row in df_scenario.iterrows():
-        charges = calculate_payment_charges(
-            payment_days=row['payment_days'],
-            invoice_amount=row['interest_base_amount'],
-            grace_period=GRACE_PERIOD_DAYS
-        )
-        charges_list.append(charges)
+    # invoice_period is the due date (20th of month)
+    simulated['due_date'] = simulated['invoice_period']
     
-    charges_df = pd.DataFrame(charges_list)
-    df_scenario['interest_earned'] = charges_df['interest_charged']
-    df_scenario['late_fees'] = charges_df['late_fee']
+    # Calculate actual payment date
+    simulated['payment_date'] = simulated['invoice_period'] + pd.to_timedelta(simulated['simulated_payment_days'], unit='D')
     
-    # Total revenue impact
-    df_scenario['total_revenue_impact'] = (df_scenario['discount_retained'] + 
-                                           df_scenario['interest_earned'] + 
-                                           df_scenario['late_fees'])
+    # Determine if paid late (anything after due date)
+    simulated['days_overdue'] = (simulated['payment_date'] - simulated['due_date']).dt.days
+    simulated['days_overdue'] = simulated['days_overdue'].clip(lower=0)  # No negative overdue days
+    simulated['is_late'] = simulated['days_overdue'] > 0
     
-    # Group by period
-    period_summary = df_scenario.groupby('invoice_period').agg({
+    # ================================================================
+    # Calculate amounts based on discount scenario
+    # ================================================================
+    if discount_scenario == 'with_discount':
+        # With discount: everyone gets the discount, but only on-time payers avoid interest
+        # Principal is always the discounted amount
+        simulated['principal_amount'] = simulated['total_discounted_price']
+        simulated['paid_on_time'] = ~simulated['is_late']
+        simulated['discount_applied'] = simulated['discount_amount']
+        
+    else:  # no_discount
+        # No discount: everyone pays full undiscounted amount
+        simulated['principal_amount'] = simulated['total_undiscounted_price']
+        simulated['paid_on_time'] = False  # No discount given to anyone
+        simulated['discount_applied'] = 0
+    
+    # ================================================================
+    # Calculate interest charges (on all overdue days)
+    # ================================================================
+    # Daily interest rate
+    daily_rate = ANNUAL_INTEREST_RATE / 365
+    
+    # Interest = Principal × Daily Rate × Days Overdue
+    # No grace period - interest starts immediately when overdue
+    simulated['interest_charged'] = (
+        simulated['principal_amount'] * 
+        daily_rate * 
+        simulated['days_overdue']
+    )
+    
+    # Late fees (only if late)
+    simulated['late_fee_charged'] = simulated['is_late'].astype(int) * LATE_FEE
+    
+    # ================================================================
+    # Calculate total revenue components
+    # ================================================================
+    # For a credit card company, REVENUE = Interest + Late Fees only
+    # Invoice amounts are what customers owe (not revenue to the credit card company)
+    
+    simulated['credit_card_revenue'] = (
+        simulated['interest_charged'] + 
+        simulated['late_fee_charged']
+    )
+    
+    # Track total amounts for comparison (not revenue)
+    simulated['total_invoice_amount_discounted'] = simulated['total_discounted_price']
+    simulated['total_invoice_amount_undiscounted'] = simulated['total_undiscounted_price']
+    
+    return simulated
+
+# ================================================================
+# Run both scenarios
+# ================================================================
+print("\n" + "="*70)
+print("RUNNING SIMULATIONS")
+print("="*70)
+
+# Use overall profile (or could segment by customer behavior)
+profile = payment_profiles['overall']
+
+# Scenario 1: With early payment discount
+print("\nScenario 1: With early payment discount...")
+with_discount = simulate_invoice_payments_with_interest(
+    fy2025_df, 
+    profile, 
+    discount_scenario='with_discount'
+)
+
+# Scenario 2: No discount (everyone pays interest on full amount)
+print("Scenario 2: No discount offered...")
+no_discount = simulate_invoice_payments_with_interest(
+    fy2025_df, 
+    profile, 
+    discount_scenario='no_discount'
+)
+
+# ================================================================
+# Summary statistics
+# ================================================================
+print("\n" + "="*70)
+print("FY2025 REVENUE COMPARISON: INTEREST MODEL vs DISCOUNT MODEL")
+print("="*70)
+
+def print_scenario_summary(df, scenario_name):
+    """Print summary statistics for a scenario"""
+    print(f"\n{scenario_name}")
+    print("-" * 70)
+    
+    total_invoices = len(df)
+    n_late = df['is_late'].sum()
+    n_on_time = total_invoices - n_late
+    
+    # Invoice statistics
+    print(f"Total invoices: {total_invoices:,}")
+    print(f"  Paid on time (by due date): {n_on_time:,} ({n_on_time/total_invoices*100:.1f}%)")
+    print(f"  Paid late (after due date): {n_late:,} ({n_late/total_invoices*100:.1f}%)")
+    
+    if n_late > 0:
+        print(f"  Avg days overdue (late invoices): {df[df['is_late']]['days_overdue'].mean():.1f}")
+        print(f"  Avg interest per late invoice: ${df[df['is_late']]['interest_charged'].mean():,.2f}")
+    
+    # Invoice amounts (what customers owe - not your revenue)
+    print(f"\nTotal Invoice Amounts (Customer Obligations):")
+    print(f"  Undiscounted invoice total: ${df['total_undiscounted_price'].sum():,.2f}")
+    print(f"  Discounted invoice total: ${df['total_discounted_price'].sum():,.2f}")
+    print(f"  Discount amount: ${df['discount_amount'].sum():,.2f}")
+    
+    # Credit Card Revenue (YOUR revenue - interest + late fees only)
+    print(f"\nCredit Card Company Revenue (Interest + Late Fees):")
+    print(f"  Interest revenue: ${df['interest_charged'].sum():,.2f}")
+    print(f"  Late fee revenue: ${df['late_fee_charged'].sum():,.2f}")
+    print(f"  Total revenue: ${df['credit_card_revenue'].sum():,.2f}")
+    
+    return {
+        'scenario': scenario_name,
+        'total_invoices': total_invoices,
+        'n_late': n_late,
+        'n_on_time': n_on_time,
+        'pct_late': n_late/total_invoices*100,
+        'avg_days_overdue': df[df['is_late']]['days_overdue'].mean() if n_late > 0 else 0,
+        'total_undiscounted': df['total_undiscounted_price'].sum(),
+        'total_discounted': df['total_discounted_price'].sum(),
+        'discount_amount': df['discount_amount'].sum(),
+        'interest_revenue': df['interest_charged'].sum(),
+        'late_fee_revenue': df['late_fee_charged'].sum(),
+        'total_revenue': df['credit_card_revenue'].sum()
+    }
+
+# Print summaries
+summary_with = print_scenario_summary(with_discount, "WITH EARLY PAYMENT DISCOUNT")
+summary_no = print_scenario_summary(no_discount, "NO DISCOUNT (INTEREST ON ALL)")
+
+# ================================================================
+# Comparison
+# ================================================================
+print("\n" + "="*70)
+print("DIRECT COMPARISON")
+print("="*70)
+
+revenue_diff = summary_no['total_revenue'] - summary_with['total_revenue']
+
+print(f"\nCredit Card Revenue (Interest + Late Fees):")
+print(f"  No Discount scenario: ${summary_no['total_revenue']:,.2f}")
+print(f"  With Discount scenario: ${summary_with['total_revenue']:,.2f}")
+print(f"  Difference: ${revenue_diff:+,.2f}")
+
+if revenue_diff > 0:
+    print(f"\n✓ NO DISCOUNT generates ${revenue_diff:,.2f} MORE revenue")
+else:
+    print(f"\n✓ WITH DISCOUNT generates ${abs(revenue_diff):,.2f} MORE revenue")
+
+print(f"\nRevenue Breakdown:")
+print(f"  Interest revenue difference: ${summary_no['interest_revenue'] - summary_with['interest_revenue']:+,.2f}")
+print(f"  Late fee revenue difference: ${summary_no['late_fee_revenue'] - summary_with['late_fee_revenue']:+,.2f}")
+
+print(f"\nInvoice Amounts (Customer Obligations - not your revenue):")
+print(f"  Total undiscounted invoices: ${summary_no['total_undiscounted']:,.2f}")
+print(f"  Total discounted invoices: ${summary_with['total_discounted']:,.2f}")
+print(f"  Discount amount: ${summary_with['discount_amount']:,.2f}")
+
+# ================================================================
+# Create comparison DataFrame
+# ================================================================
+comparison_df = pd.DataFrame([summary_with, summary_no])
+comparison_df.to_csv('fy2025_interest_vs_discount_comparison.csv', index=False)
+print(f"\n✓ Saved comparison summary to: fy2025_interest_vs_discount_comparison.csv")
+
+# ================================================================
+# Save detailed simulations
+# ================================================================
+with pd.ExcelWriter('fy2025_detailed_simulations.xlsx', engine='openpyxl') as writer:
+    with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
+    no_discount.to_excel(writer, sheet_name='No_Discount', index=False)
+    comparison_df.to_excel(writer, sheet_name='Summary_Comparison', index=False)
+
+print(f"✓ Saved detailed simulations to: fy2025_detailed_simulations.xlsx")
+
+# ================================================================
+# Visualization: Monthly revenue comparison
+# ================================================================
+print("\n" + "="*70)
+print("CREATING VISUALIZATIONS")
+print("="*70)
+
+# Monthly aggregation
+def aggregate_by_month(df, scenario_name):
+    """Aggregate revenue by month"""
+    monthly = df.groupby(df['invoice_period'].dt.to_period('M')).agg({
+        'total_undiscounted_price': 'sum',
+        'total_discounted_price': 'sum',
         'discount_amount': 'sum',
-        'discount_retained': 'sum',
-        'interest_earned': 'sum',
-        'late_fees': 'sum',
-        'total_revenue_impact': 'sum',
-        'paid_on_time': ['sum', 'count']
+        'interest_charged': 'sum',
+        'late_fee_charged': 'sum',
+        'credit_card_revenue': 'sum'
     }).reset_index()
     
-    period_summary.columns = ['invoice_period', 'total_discount_offered', 'discount_retained',
-                              'interest_earned', 'late_fees', 'total_revenue_impact',
-                              'n_paid_on_time', 'n_total_invoices']
+    monthly['invoice_period'] = monthly['invoice_period'].dt.to_timestamp()
+    monthly['scenario'] = scenario_name
     
-    # Calculate cumulative values
-    period_summary['cumulative_discount_offered'] = period_summary['total_discount_offered'].cumsum()
-    period_summary['cumulative_discount_retained'] = period_summary['discount_retained'].cumsum()
-    period_summary['cumulative_interest_earned'] = period_summary['interest_earned'].cumsum()
-    period_summary['cumulative_late_fees'] = period_summary['late_fees'].cumsum()
-    period_summary['cumulative_total_revenue'] = period_summary['total_revenue_impact'].cumsum()
-    
-    # Get total revenue by target date
-    mask_target = period_summary['invoice_period'] <= target_date
-    if mask_target.any():
-        revenue_by_target = period_summary[mask_target]['cumulative_total_revenue'].iloc[-1]
-    else:
-        revenue_by_target = 0
-    
-    return revenue_by_target, period_summary
+    return monthly
 
-# ================================================================
-# Binary search to find the required default rate
-# ================================================================
-print(f"\nTarget: ${BREAKEVEN_TARGET:,} by {TARGET_DATE.strftime('%Y-%m-%d')} (FY2025 End)")
-print(f"Tolerance: ±${TOLERANCE:,}")
-print("\nStarting binary search...")
-print("-"*70)
+monthly_with = aggregate_by_month(with_discount, 'With Discount')
+monthly_no = aggregate_by_month(no_discount, 'No Discount')
 
-low_rate = 0.0
-high_rate = 1.0
-best_rate = None
-best_revenue = None
-best_period_summary = None
-iteration = 0
+# Calculate cumulative values
+monthly_with['cumulative_undiscounted'] = monthly_with['total_undiscounted_price'].cumsum()
+monthly_with['cumulative_discounted'] = monthly_with['total_discounted_price'].cumsum()
+monthly_with['cumulative_revenue'] = monthly_with['credit_card_revenue'].cumsum()
 
-search_history = []
+monthly_no['cumulative_undiscounted'] = monthly_no['total_undiscounted_price'].cumsum()
+monthly_no['cumulative_revenue'] = monthly_no['credit_card_revenue'].cumsum()
 
-while iteration < MAX_ITERATIONS:
-    iteration += 1
-    mid_rate = (low_rate + high_rate) / 2
-    
-    revenue, period_summary = calculate_revenue_at_date(
-        combined_df_fy2025, mid_rate, TARGET_DATE, interest_scenario=INTEREST_SCENARIO
-    )
-    
-    gap = revenue - BREAKEVEN_TARGET
-    
-    search_history.append({
-        'iteration': iteration,
-        'default_rate': mid_rate,
-        'total_revenue': revenue,
-        'gap': gap
-    })
-    
-    print(f"Iteration {iteration:2d}: Rate={mid_rate*100:6.3f}% → Revenue=${revenue:>12,.2f} (Gap: ${gap:>10,.2f})")
-    
-    # Check if we're within tolerance
-    if abs(gap) <= TOLERANCE:
-        best_rate = mid_rate
-        best_revenue = revenue
-        best_period_summary = period_summary
-        print(f"\n✓ FOUND! Default rate of {best_rate*100:.3f}% achieves breakeven within tolerance")
-        break
-    
-    # Adjust search bounds
-    if revenue < BREAKEVEN_TARGET:
-        # Need more revenue (higher default rate)
-        low_rate = mid_rate
-    else:
-        # Too much revenue (lower default rate)
-        high_rate = mid_rate
-    
-    # Store best attempt
-    if best_revenue is None or abs(gap) < abs(best_revenue - BREAKEVEN_TARGET):
-        best_rate = mid_rate
-        best_revenue = revenue
-        best_period_summary = period_summary
-
-if iteration >= MAX_ITERATIONS:
-    print(f"\n⚠ Reached maximum iterations. Best result:")
-
-# ================================================================
-# Display final results
-# ================================================================
-print("\n" + "="*70)
-print("FINAL RESULTS")
-print("="*70)
-print(f"Optimal default rate: {best_rate*100:.3f}%")
-print(f"Total revenue by end of FY2025: ${best_revenue:,.2f}")
-print(f"Target (breakeven): ${BREAKEVEN_TARGET:,.2f}")
-print(f"Difference: ${best_revenue - BREAKEVEN_TARGET:+,.2f}")
-
-# Calculate component breakdown at optimal rate
-mask_target = best_period_summary['invoice_period'] <= TARGET_DATE
-if mask_target.any():
-    data_at_target = best_period_summary[mask_target].iloc[-1]
-    discount_retained = data_at_target['cumulative_discount_retained']
-    interest_earned = data_at_target['cumulative_interest_earned']
-    late_fees = data_at_target['cumulative_late_fees']
-    
-    print(f"\nRevenue breakdown:")
-    print(f"  Discount retained: ${discount_retained:,.2f} ({discount_retained/best_revenue*100:.1f}%)")
-    print(f"  Interest earned: ${interest_earned:,.2f} ({interest_earned/best_revenue*100:.1f}%)")
-    print(f"  Late fees: ${late_fees:,.2f} ({late_fees/best_revenue*100:.1f}%)")
-
-print(f"\nThis means approximately {int(len(combined_df_fy2025) * best_rate):,} out of {len(combined_df_fy2025):,} invoices")
-print(f"would need to NOT pay on time for the strategy to break even by end of FY2025.")
-
-# ================================================================
-# Calculate and display additional scenarios for comparison
-# ================================================================
-print("\n" + "="*70)
-print("COMPARISON WITH OTHER DEFAULT RATES")
-print("="*70)
-
-comparison_rates = [0.05, 0.10, 0.15, 0.20, best_rate, 0.30, 0.40, 0.50]
-comparison_rates = sorted(set(comparison_rates))  # Remove duplicates and sort
-
-comparison_results = []
-scenario_data = {}
-
-for rate in comparison_rates:
-    revenue, period_summary = calculate_revenue_at_date(
-        combined_df_fy2025, rate, TARGET_DATE, interest_scenario=INTEREST_SCENARIO
-    )
-    
-    # Get component breakdown
-    mask_target = period_summary['invoice_period'] <= TARGET_DATE
-    if mask_target.any():
-        data_at_target = period_summary[mask_target].iloc[-1]
-        discount_retained = data_at_target['cumulative_discount_retained']
-        interest_earned = data_at_target['cumulative_interest_earned']
-        late_fees = data_at_target['cumulative_late_fees']
-    else:
-        discount_retained = 0
-        interest_earned = 0
-        late_fees = 0
-    
-    comparison_results.append({
-        'default_rate': rate,
-        'total_revenue_fy2025': revenue,
-        'discount_retained': discount_retained,
-        'interest_earned': interest_earned,
-        'late_fees': late_fees,
-        'gap_from_breakeven': revenue - BREAKEVEN_TARGET,
-        'reaches_breakeven': revenue >= BREAKEVEN_TARGET,
-        'n_defaults': int(len(combined_df_fy2025) * rate)
-    })
-    
-    scenario_data[rate] = period_summary
-
-comparison_df = pd.DataFrame(comparison_results)
-
-for _, row in comparison_df.iterrows():
-    status = "✓ BREAKS EVEN" if row['reaches_breakeven'] else "✗ Below target"
-    print(f"\n{row['default_rate']*100:5.2f}% default: {status}")
-    print(f"  Total revenue: ${row['total_revenue_fy2025']:,.2f}")
-    print(f"    - Discount: ${row['discount_retained']:,.2f}")
-    print(f"    - Interest: ${row['interest_earned']:,.2f}")
-    print(f"    - Late fees: ${row['late_fees']:,.2f}")
-    print(f"  Gap: ${row['gap_from_breakeven']:+,.2f}")
-    print(f"  Defaults: {row['n_defaults']:,} invoices")
-
-# ================================================================
 # Create visualization
+fig, axes = plt.subplots(2, 2, figsize=(20, 12))
+
 # ================================================================
-print("\n" + "="*70)
-print("GENERATING VISUALIZATION")
-print("="*70)
+# Plot 1: Cumulative Invoice Amounts + Revenue (With Discount)
+# ================================================================
+ax1 = axes[0, 0]
 
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(18, 14))
+# Invoice amounts (what customers owe)
+ax1.plot(monthly_with['invoice_period'], monthly_with['cumulative_undiscounted'], 
+         marker='o', linewidth=2.5, label='Total Invoices (Undiscounted)', 
+         color='#4472C4', linestyle='--', alpha=0.7)
+ax1.plot(monthly_with['invoice_period'], monthly_with['cumulative_discounted'], 
+         marker='s', linewidth=2.5, label='Total Invoices (Discounted)', 
+         color='#70AD47', linestyle='--', alpha=0.7)
 
-# Color palette
-colors = ['#4472C4', '#70AD47', '#FFC000', '#A64D79', '#FF6B6B', '#845EC2']
+# Credit card revenue (interest + late fees)
+ax1.plot(monthly_with['invoice_period'], monthly_with['cumulative_revenue'], 
+         marker='^', linewidth=3, label='Cumulative Revenue (Interest + Late Fees)', 
+         color='#FF6B6B', zorder=10)
 
-# Top plot: Cumulative revenue over time
-start_date = pd.Timestamp("2023-10-01")
-
-for i, rate in enumerate([0.10, 0.15, 0.20, best_rate, 0.30, 0.35]):
-    if rate in scenario_data:
-        period_data = scenario_data[rate]
-        color = colors[i % len(colors)]
-        linewidth = 3 if rate == best_rate else 2
-        alpha = 1.0 if rate == best_rate else 0.7
-        
-        label = f"{rate*100:.1f}% default" + (" (Breakeven rate)" if rate == best_rate else "")
-        
-        mark_every = max(1, len(period_data)//15)
-        ax1.plot(period_data['invoice_period'], period_data['cumulative_total_revenue'],
-                color=color, linewidth=linewidth, alpha=alpha,
-                label=label, marker='o', markersize=4, markevery=mark_every)
-
-# Reference line for discount offered
-ref_data = scenario_data[list(scenario_data.keys())[0]]
-ax1.plot(ref_data['invoice_period'], ref_data['cumulative_discount_offered'],
-        color="#222222", linewidth=1.5, alpha=0.5,
-        label='Total discount offered (if all pay early)',
-        linestyle='--', marker='s', markersize=3, markevery=max(1, len(ref_data)//15))
-
-# Breakeven line
-ax1.axhline(y=BREAKEVEN_TARGET, color='#FF0000', linewidth=2,
-           linestyle='-', alpha=0.8, label=f'Breakeven target (${BREAKEVEN_TARGET:,})', zorder=10)
-
-# End of FY2025 line
-ax1.axvline(x=TARGET_DATE, color='#8B7BA8', linewidth=2,
-           linestyle=':', alpha=0.7, label='End of FY2025 (Mar 31, 2025)', zorder=9)
-
-# Add year-end markers
-ax1.axvline(x=pd.Timestamp("2023-12-31"), color='#D3D3D3', linewidth=1,
-           linestyle=':', alpha=0.5, label='End of CY2023')
-ax1.axvline(x=pd.Timestamp("2024-12-31"), color='#D3D3D3', linewidth=1,
-           linestyle=':', alpha=0.5, label='End of CY2024')
-
-ax1.set_xlim(left=start_date, right=TARGET_DATE)
-ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax1.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
-ax1.tick_params(axis='x', rotation=45)
-
-ax1.set_xlabel('Invoice Period', fontsize=13, fontweight='bold')
-ax1.set_ylabel('$ Revenue Amount', fontsize=13, fontweight='bold')
-title_text = f'Total Revenue (Discount + Interest + Late Fees): Finding Breakeven Rate by FY2025'
-ax1.set_title(title_text, fontsize=16, fontweight='bold', pad=15)
-ax1.legend(loc='upper left', fontsize=9, framealpha=0.95)
-ax1.grid(True, alpha=0.3, linestyle='--')
+ax1.set_title('WITH DISCOUNT: Invoice Amounts vs Credit Card Revenue', 
+              fontsize=14, fontweight='bold')
+ax1.set_xlabel('Month', fontsize=12)
+ax1.set_ylabel('Cumulative Amount ($)', fontsize=12)
+ax1.legend(loc='upper left', fontsize=10)
+ax1.grid(True, alpha=0.3)
 ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-ax1.set_facecolor('#F8F8F8')
 
-# Bottom plot: Default rate vs. total revenue
-revenue_amounts = [result['total_revenue_fy2025'] for result in comparison_results]
-default_rates_pct = [result['default_rate']*100 for result in comparison_results]
+# ================================================================
+# Plot 2: Cumulative Invoice Amounts + Revenue (No Discount)
+# ================================================================
+ax2 = axes[0, 1]
 
-ax2.plot(default_rates_pct, revenue_amounts, 
-         color='#4472C4', linewidth=3, marker='o', markersize=8, label='Total Revenue')
+# Invoice amounts
+ax2.plot(monthly_no['invoice_period'], monthly_no['cumulative_undiscounted'], 
+         marker='o', linewidth=2.5, label='Total Invoices (Undiscounted)', 
+         color='#4472C4', linestyle='--', alpha=0.7)
 
-# Mark the optimal point
-ax2.scatter([best_rate*100], [best_revenue], 
-           color='#FF0000', s=200, marker='*', zorder=10,
-           label=f'Breakeven rate: {best_rate*100:.2f}%', edgecolors='black', linewidths=2)
+# Credit card revenue (interest + late fees)
+ax2.plot(monthly_no['invoice_period'], monthly_no['cumulative_revenue'], 
+         marker='^', linewidth=3, label='Cumulative Revenue (Interest + Late Fees)', 
+         color='#FF6B6B', zorder=10)
 
-# Breakeven line
-ax2.axhline(y=BREAKEVEN_TARGET, color='#FF0000', linewidth=2,
-           linestyle='--', alpha=0.6, label=f'Breakeven target (${BREAKEVEN_TARGET:,})')
-
-ax2.set_xlabel('Default Rate (%)', fontsize=13, fontweight='bold')
-ax2.set_ylabel('Total Revenue by End of FY2025 ($)', fontsize=13, fontweight='bold')
-ax2.set_title('Default Rate vs. Total Revenue (Through FY2025)',
-             fontsize=16, fontweight='bold', pad=15)
-ax2.legend(loc='upper left', fontsize=11, framealpha=0.95)
-ax2.grid(True, alpha=0.3, linestyle='--')
+ax2.set_title('NO DISCOUNT: Invoice Amounts vs Credit Card Revenue', 
+              fontsize=14, fontweight='bold')
+ax2.set_xlabel('Month', fontsize=12)
+ax2.set_ylabel('Cumulative Amount ($)', fontsize=12)
+ax2.legend(loc='upper left', fontsize=10)
+ax2.grid(True, alpha=0.3)
 ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
-ax2.set_facecolor('#F8F8F8')
+
+# ================================================================
+# Plot 3: Revenue Comparison (Both Scenarios)
+# ================================================================
+ax3 = axes[1, 0]
+
+ax3.plot(monthly_with['invoice_period'], monthly_with['cumulative_revenue'], 
+         marker='o', linewidth=2.5, label='With Discount', color='#70AD47')
+ax3.plot(monthly_no['invoice_period'], monthly_no['cumulative_revenue'], 
+         marker='s', linewidth=2.5, label='No Discount', color='#4472C4')
+
+ax3.set_title('Cumulative Credit Card Revenue Comparison', 
+              fontsize=14, fontweight='bold')
+ax3.set_xlabel('Month', fontsize=12)
+ax3.set_ylabel('Cumulative Revenue ($)', fontsize=12)
+ax3.legend(loc='upper left', fontsize=11)
+ax3.grid(True, alpha=0.3)
+ax3.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+
+# ================================================================
+# Plot 4: Monthly Revenue Breakdown
+# ================================================================
+ax4 = axes[1, 1]
+
+# Stack bar chart for revenue components
+width = 15  # bar width in days
+x_with = monthly_with['invoice_period'] - pd.Timedelta(days=width/2)
+x_no = monthly_no['invoice_period'] + pd.Timedelta(days=width/2)
+
+ax4.bar(x_with, monthly_with['interest_charged'], width=width, 
+        label='Interest (With Discount)', color='#70AD47', alpha=0.7)
+ax4.bar(x_with, monthly_with['late_fee_charged'], width=width, 
+        bottom=monthly_with['interest_charged'],
+        label='Late Fees (With Discount)', color='#A9D18E', alpha=0.7)
+
+ax4.bar(x_no, monthly_no['interest_charged'], width=width, 
+        label='Interest (No Discount)', color='#4472C4', alpha=0.7)
+ax4.bar(x_no, monthly_no['late_fee_charged'], width=width, 
+        bottom=monthly_no['interest_charged'],
+        label='Late Fees (No Discount)', color='#8FAADC', alpha=0.7)
+
+ax4.set_title('Monthly Revenue Components: Interest vs Late Fees', 
+              fontsize=14, fontweight='bold')
+ax4.set_xlabel('Month', fontsize=12)
+ax4.set_ylabel('Monthly Revenue ($)', fontsize=12)
+ax4.legend(loc='upper left', fontsize=9)
+ax4.grid(True, alpha=0.3, axis='y')
+ax4.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+
+# Format all x-axes
+for ax in axes.flat:
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    ax.tick_params(axis='x', rotation=45)
 
 plt.tight_layout()
-plt.savefig('breakeven_rate_fy2025_payment_based.png', dpi=300, bbox_inches='tight')
-print("✓ Saved visualization to: breakeven_rate_fy2025_payment_based.png")
+plt.savefig('fy2025_credit_card_revenue_analysis.png', dpi=300, bbox_inches='tight')
+print(f"✓ Saved visualization to: fy2025_credit_card_revenue_analysis.png")
 
-# ================================================================
-# Save results
-# ================================================================
-comparison_df.to_csv('breakeven_rate_comparison_payment_based_fy2025.csv', index=False)
-print("✓ Saved comparison results to: breakeven_rate_comparison_payment_based_fy2025.csv")
-
-# Save search history
-search_df = pd.DataFrame(search_history)
-search_df.to_csv('binary_search_history_payment_based_fy2025.csv', index=False)
-print("✓ Saved search history to: binary_search_history_payment_based_fy2025.csv")
-
-# Save detailed period data for optimal rate
-best_period_summary.to_csv('optimal_rate_period_detail_payment_based_fy2025.csv', index=False)
-print("✓ Saved optimal rate period details to: optimal_rate_period_detail_payment_based_fy2025.csv")
+plt.show()
 
 print("\n" + "="*70)
 print("ANALYSIS COMPLETE")
 print("="*70)
-print(f"\nKEY FINDING: A default rate of {best_rate*100:.3f}% is needed to break even by end of FY2025")
-print(f"This includes discount retention, interest charges (>{GRACE_PERIOD_DAYS} days), and late fees.")
-print(f"Interest calculated on: {INTEREST_SCENARIO}")
-print(f"\nNote: FY2025 = April 1, 2024 through March 31, 2025")
+
