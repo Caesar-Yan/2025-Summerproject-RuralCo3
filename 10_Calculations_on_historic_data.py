@@ -70,7 +70,7 @@ combined_df['invoice_period'] = parse_invoice_period(combined_df['invoice_period
 combined_df = combined_df[combined_df['invoice_period'].notna()].copy()
 
 # Hard filter to remove obvious epoch-era junk like 1970-xx-xx
-min_valid = pd.Timestamp("2000-01-01")
+min_valid = pd.Timestamp("2023-11-01")
 max_valid = pd.Timestamp("2035-12-31")
 combined_df = combined_df[(combined_df['invoice_period'] >= min_valid) & (combined_df['invoice_period'] <= max_valid)].copy()
 
