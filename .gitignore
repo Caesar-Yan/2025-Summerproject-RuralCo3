@@ -6,3 +6,5 @@
 
 # ignore graphs
 *.png
+*.xlsx
+simulation_results_from_dec2023/detailed_simulations.xlsx
