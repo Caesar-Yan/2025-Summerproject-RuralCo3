@@ -11,11 +11,15 @@ import pickle
 ANNUAL_INTEREST_RATE = 0.2395  # 23.95% p.a.
 LATE_FEE = 10.00  # $10 per late invoice
 RANDOM_SEED = 42
-FY2025_START = pd.Timestamp("2024-07-01")  # NZ Financial Year
-FY2025_END = pd.Timestamp("2025-06-30")
+START_DATE = pd.Timestamp("2023-12-20")  # Start from 20th December 2023
+OUTPUT_DIR = "simulation_results_from_dec2023"  # Output directory for all results
 
 # Note: invoice_period is already set to 20th of month (the due date)
 # Any payment after invoice_period is overdue
+
+# Create output directory if it doesn't exist
+import os
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ================================================================
 # Load invoice data
@@ -61,16 +65,13 @@ def parse_invoice_period(series: pd.Series) -> pd.Series:
 combined_df['invoice_period'] = parse_invoice_period(combined_df['invoice_period'])
 combined_df = combined_df[combined_df['invoice_period'].notna()].copy()
 
-# Filter to FY2025 only
-fy2025_df = combined_df[
-    (combined_df['invoice_period'] >= FY2025_START) & 
-    (combined_df['invoice_period'] <= FY2025_END)
-].copy()
+# Filter to data from 20/12/2023 onwards
+filtered_df = combined_df[combined_df['invoice_period'] >= START_DATE].copy()
 
-print(f"FY2025 invoices ({FY2025_START.strftime('%Y-%m-%d')} to {FY2025_END.strftime('%Y-%m-%d')}): {len(fy2025_df):,}")
+print(f"Invoices from {START_DATE.strftime('%Y-%m-%d')} onwards: {len(filtered_df):,}")
 
-if len(fy2025_df) == 0:
-    print("\n⚠ WARNING: No invoices found in FY2025 period!")
+if len(filtered_df) == 0:
+    print("\n⚠ WARNING: No invoices found from this date onwards!")
     print("Available date range in data:")
     print(f"  Min: {combined_df['invoice_period'].min()}")
     print(f"  Max: {combined_df['invoice_period'].max()}")
@@ -214,7 +215,7 @@ profile = payment_profiles['overall']
 # Scenario 1: With early payment discount
 print("\nScenario 1: With early payment discount...")
 with_discount = simulate_invoice_payments_with_interest(
-    fy2025_df, 
+    filtered_df, 
     profile, 
     discount_scenario='with_discount'
 )
@@ -222,7 +223,7 @@ with_discount = simulate_invoice_payments_with_interest(
 # Scenario 2: No discount (everyone pays interest on full amount)
 print("Scenario 2: No discount offered...")
 no_discount = simulate_invoice_payments_with_interest(
-    fy2025_df, 
+    filtered_df, 
     profile, 
     discount_scenario='no_discount'
 )
@@ -231,7 +232,7 @@ no_discount = simulate_invoice_payments_with_interest(
 # Summary statistics
 # ================================================================
 print("\n" + "="*70)
-print("FY2025 REVENUE COMPARISON: INTEREST MODEL vs DISCOUNT MODEL")
+print(f"REVENUE COMPARISON: FROM {START_DATE.strftime('%d/%m/%Y')} ONWARDS")
 print("="*70)
 
 def print_scenario_summary(df, scenario_name):
@@ -315,18 +316,20 @@ print(f"  Discount amount: ${summary_with['discount_amount']:,.2f}")
 # Create comparison DataFrame
 # ================================================================
 comparison_df = pd.DataFrame([summary_with, summary_no])
-comparison_df.to_csv('fy2025_interest_vs_discount_comparison.csv', index=False)
-print(f"\n✓ Saved comparison summary to: fy2025_interest_vs_discount_comparison.csv")
+output_csv = os.path.join(OUTPUT_DIR, 'comparison_summary.csv')
+comparison_df.to_csv(output_csv, index=False)
+print(f"\n✓ Saved comparison summary to: {output_csv}")
 
 # ================================================================
 # Save detailed simulations
 # ================================================================
-with pd.ExcelWriter('fy2025_detailed_simulations.xlsx', engine='openpyxl') as writer:
+output_excel = os.path.join(OUTPUT_DIR, 'detailed_simulations.xlsx')
+with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
     with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
     no_discount.to_excel(writer, sheet_name='No_Discount', index=False)
     comparison_df.to_excel(writer, sheet_name='Summary_Comparison', index=False)
 
-print(f"✓ Saved detailed simulations to: fy2025_detailed_simulations.xlsx")
+print(f"✓ Saved detailed simulations to: {output_excel}")
 
 # ================================================================
 # Visualization: Monthly revenue comparison
@@ -469,12 +472,18 @@ for ax in axes.flat:
     ax.tick_params(axis='x', rotation=45)
 
 plt.tight_layout()
-plt.savefig('fy2025_credit_card_revenue_analysis.png', dpi=300, bbox_inches='tight')
-print(f"✓ Saved visualization to: fy2025_credit_card_revenue_analysis.png")
+output_viz = os.path.join(OUTPUT_DIR, 'revenue_analysis_visualization.png')
+plt.savefig(output_viz, dpi=300, bbox_inches='tight')
+print(f"✓ Saved visualization to: {output_viz}")
 
 plt.show()
 
 print("\n" + "="*70)
 print("ANALYSIS COMPLETE")
 print("="*70)
-
+print(f"\nAll results saved to folder: {OUTPUT_DIR}/")
+print("Files created:")
+print(f"  1. comparison_summary.csv - Summary comparison table")
+print(f"  2. detailed_simulations.xlsx - Full simulation data (both scenarios)")
+print(f"  3. revenue_analysis_visualization.png - 4-panel visualization")
+print("="*70)
