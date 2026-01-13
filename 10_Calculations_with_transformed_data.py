@@ -29,8 +29,8 @@ print("LOADING TRANSFORMED INVOICE DATA")
 print("="*70)
 
 # Load combined invoice data (USING TRANSFORMED FILES)
-ats_grouped = pd.read_csv('ats_grouped_with_discounts_transformed.csv')
-invoice_grouped = pd.read_csv('invoice_grouped_with_discounts_transformed.csv')
+ats_grouped = pd.read_csv('ats_grouped_transformed_with_discounts.csv')
+invoice_grouped = pd.read_csv('invoice_grouped_transformed_with_discounts.csv')
 
 # Combine datasets
 ats_grouped['customer_type'] = 'ATS'
