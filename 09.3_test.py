@@ -22,6 +22,13 @@ import matplotlib.pyplot as plt
 import pickle
 from pathlib import Path
 
+import os
+
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(SCRIPT_DIR)
+print(f"Working directory set to: {os.getcwd()}")
+
 # ================================================================
 # Configuration
 # ================================================================
@@ -307,108 +314,108 @@ output_cols = ['InvoiceAmount', 'decile', 'avg_time_between_payments', 'cd', 'La
 df[output_cols].to_csv(decile_assignment_file, index=False)
 print(f"✓ Saved decile assignments to: {decile_assignment_file}")
 
-# ================================================================
-# Create visualizations
-# ================================================================
-print("\n" + "="*70)
-print("CREATING VISUALIZATIONS")
-print("="*70)
+# # ================================================================
+# # Create visualizations
+# # ================================================================
+# print("\n" + "="*70)
+# print("CREATING VISUALIZATIONS")
+# print("="*70)
 
-fig = plt.figure(figsize=(16, 12))
-gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.3)
+# fig = plt.figure(figsize=(16, 12))
+# gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.3)
 
-# Plot 1: Probability of late payment by decile
-ax1 = fig.add_subplot(gs[0, 0])
-prob_late_values = [float(row['prob_late_pct'].rstrip('%')) for _, row in summary_df.iterrows()]
-decile_labels = [f"D{d}" for d in summary_df['decile']]
-ax1.bar(range(len(summary_df)), prob_late_values, color='coral', alpha=0.7)
-ax1.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
-ax1.set_ylabel(f'Probability of Late Payment (%)', fontsize=11)
-ax1.set_title(f'P(Late | Decile) - Avg Time Between Payments >{PAYMENT_TERMS_MONTHS:.2f} months', fontsize=12, fontweight='bold')
-ax1.set_xticks(range(len(summary_df)))
-ax1.set_xticklabels(decile_labels)
-ax1.grid(True, alpha=0.3, axis='y')
-for i, v in enumerate(prob_late_values):
-    ax1.text(i, v, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
+# # Plot 1: Probability of late payment by decile
+# ax1 = fig.add_subplot(gs[0, 0])
+# prob_late_values = [float(row['prob_late_pct'].rstrip('%')) for _, row in summary_df.iterrows()]
+# decile_labels = [f"D{d}" for d in summary_df['decile']]
+# ax1.bar(range(len(summary_df)), prob_late_values, color='coral', alpha=0.7)
+# ax1.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
+# ax1.set_ylabel(f'Probability of Late Payment (%)', fontsize=11)
+# ax1.set_title(f'P(Late | Decile) - Avg Time Between Payments >{PAYMENT_TERMS_MONTHS:.2f} months', fontsize=12, fontweight='bold')
+# ax1.set_xticks(range(len(summary_df)))
+# ax1.set_xticklabels(decile_labels)
+# ax1.grid(True, alpha=0.3, axis='y')
+# for i, v in enumerate(prob_late_values):
+#     ax1.text(i, v, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
 
-# Plot 2: Average time between payments by decile
-ax2 = fig.add_subplot(gs[0, 1])
-avg_time_between = [float(row['avg_time_between_payments']) for _, row in summary_df.iterrows()]
-ax2.bar(range(len(summary_df)), avg_time_between, color='steelblue', alpha=0.7)
-ax2.axhline(y=PAYMENT_TERMS_MONTHS, color='red', linestyle='--', linewidth=2, label=f'{PAYMENT_TERMS_MONTHS:.2f}-month terms')
-ax2.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
-ax2.set_ylabel('Avg Time Between Payments (months)', fontsize=11)
-ax2.set_title('Average Time Between Payments by Decile', fontsize=12, fontweight='bold')
-ax2.set_xticks(range(len(summary_df)))
-ax2.set_xticklabels(decile_labels)
-ax2.legend(fontsize=9)
-ax2.grid(True, alpha=0.3, axis='y')
+# # Plot 2: Average time between payments by decile
+# ax2 = fig.add_subplot(gs[0, 1])
+# avg_time_between = [float(row['avg_time_between_payments']) for _, row in summary_df.iterrows()]
+# ax2.bar(range(len(summary_df)), avg_time_between, color='steelblue', alpha=0.7)
+# ax2.axhline(y=PAYMENT_TERMS_MONTHS, color='red', linestyle='--', linewidth=2, label=f'{PAYMENT_TERMS_MONTHS:.2f}-month terms')
+# ax2.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
+# ax2.set_ylabel('Avg Time Between Payments (months)', fontsize=11)
+# ax2.set_title('Average Time Between Payments by Decile', fontsize=12, fontweight='bold')
+# ax2.set_xticks(range(len(summary_df)))
+# ax2.set_xticklabels(decile_labels)
+# ax2.legend(fontsize=9)
+# ax2.grid(True, alpha=0.3, axis='y')
 
-# Plot 3: InvoiceAmount range by decile
-ax3 = fig.add_subplot(gs[1, 0])
-min_amounts = [float(row['min_amount'].replace('$', '').replace(',', '')) for _, row in summary_df.iterrows()]
-max_amounts = [float(row['max_amount'].replace('$', '').replace(',', '')) for _, row in summary_df.iterrows()]
-ax3.bar(range(len(summary_df)), max_amounts, color='mediumseagreen', alpha=0.7, label='Max')
-ax3.bar(range(len(summary_df)), min_amounts, color='lightgreen', alpha=0.7, label='Min')
-ax3.set_xlabel('Decile', fontsize=11)
-ax3.set_ylabel('InvoiceAmount ($)', fontsize=11)
-ax3.set_title('InvoiceAmount Range by Decile', fontsize=12, fontweight='bold')
-ax3.set_xticks(range(len(summary_df)))
-ax3.set_xticklabels(decile_labels)
-ax3.legend(fontsize=9)
-ax3.grid(True, alpha=0.3, axis='y')
+# # Plot 3: InvoiceAmount range by decile
+# ax3 = fig.add_subplot(gs[1, 0])
+# min_amounts = [float(row['min_amount'].replace('$', '').replace(',', '')) for _, row in summary_df.iterrows()]
+# max_amounts = [float(row['max_amount'].replace('$', '').replace(',', '')) for _, row in summary_df.iterrows()]
+# ax3.bar(range(len(summary_df)), max_amounts, color='mediumseagreen', alpha=0.7, label='Max')
+# ax3.bar(range(len(summary_df)), min_amounts, color='lightgreen', alpha=0.7, label='Min')
+# ax3.set_xlabel('Decile', fontsize=11)
+# ax3.set_ylabel('InvoiceAmount ($)', fontsize=11)
+# ax3.set_title('InvoiceAmount Range by Decile', fontsize=12, fontweight='bold')
+# ax3.set_xticks(range(len(summary_df)))
+# ax3.set_xticklabels(decile_labels)
+# ax3.legend(fontsize=9)
+# ax3.grid(True, alpha=0.3, axis='y')
 
-# Plot 4: Average months overdue (when late) by decile
-ax4 = fig.add_subplot(gs[1, 1])
-avg_overdue = [float(row['avg_months_overdue']) for _, row in summary_df.iterrows()]
-ax4.bar(range(len(summary_df)), avg_overdue, color='indianred', alpha=0.7)
-ax4.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
-ax4.set_ylabel('Avg Months Overdue (when late)', fontsize=11)
-ax4.set_title('Average Months Overdue by Decile', fontsize=12, fontweight='bold')
-ax4.set_xticks(range(len(summary_df)))
-ax4.set_xticklabels(decile_labels)
-ax4.grid(True, alpha=0.3, axis='y')
+# # Plot 4: Average months overdue (when late) by decile
+# ax4 = fig.add_subplot(gs[1, 1])
+# avg_overdue = [float(row['avg_months_overdue']) for _, row in summary_df.iterrows()]
+# ax4.bar(range(len(summary_df)), avg_overdue, color='indianred', alpha=0.7)
+# ax4.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
+# ax4.set_ylabel('Avg Months Overdue (when late)', fontsize=11)
+# ax4.set_title('Average Months Overdue by Decile', fontsize=12, fontweight='bold')
+# ax4.set_xticks(range(len(summary_df)))
+# ax4.set_xticklabels(decile_labels)
+# ax4.grid(True, alpha=0.3, axis='y')
 
-# Plot 5: Delinquency level distribution across deciles (stacked bar)
-ax5 = fig.add_subplot(gs[2, :])
-decile_nums = sorted(df['decile'].unique())
-cd_levels = sorted(df['cd'].unique())
+# # Plot 5: Delinquency level distribution across deciles (stacked bar)
+# ax5 = fig.add_subplot(gs[2, :])
+# decile_nums = sorted(df['decile'].unique())
+# cd_levels = sorted(df['cd'].unique())
 
-# Build matrix of P(cd | decile, late)
-cd_matrix = []
-for decile_num in decile_nums:
-    decile_profile = payment_profile['deciles'][f'decile_{decile_num}']
-    cd_given_late = decile_profile['delinquency_distribution']['cd_given_late']
+# # Build matrix of P(cd | decile, late)
+# cd_matrix = []
+# for decile_num in decile_nums:
+#     decile_profile = payment_profile['deciles'][f'decile_{decile_num}']
+#     cd_given_late = decile_profile['delinquency_distribution']['cd_given_late']
     
-    row = [cd_given_late.get(cd_level, 0) * 100 for cd_level in cd_levels]
-    cd_matrix.append(row)
+#     row = [cd_given_late.get(cd_level, 0) * 100 for cd_level in cd_levels]
+#     cd_matrix.append(row)
 
-cd_matrix = np.array(cd_matrix).T  # Transpose for stacking
+# cd_matrix = np.array(cd_matrix).T  # Transpose for stacking
 
-# Create stacked bar
-bottom = np.zeros(len(decile_nums))
-colors = plt.cm.RdYlGn_r(np.linspace(0.2, 0.8, len(cd_levels)))
+# # Create stacked bar
+# bottom = np.zeros(len(decile_nums))
+# colors = plt.cm.RdYlGn_r(np.linspace(0.2, 0.8, len(cd_levels)))
 
-for i, cd_level in enumerate(cd_levels):
-    ax5.bar(range(len(decile_nums)), cd_matrix[i], bottom=bottom, 
-            label=f'cd={cd_level}', color=colors[i], alpha=0.8)
-    bottom += cd_matrix[i]
+# for i, cd_level in enumerate(cd_levels):
+#     ax5.bar(range(len(decile_nums)), cd_matrix[i], bottom=bottom, 
+#             label=f'cd={cd_level}', color=colors[i], alpha=0.8)
+#     bottom += cd_matrix[i]
 
-ax5.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
-ax5.set_ylabel('Distribution (%)', fontsize=11)
-ax5.set_title('Delinquency Level Distribution P(cd | Decile, Late)', fontsize=12, fontweight='bold')
-ax5.set_xticks(range(len(decile_nums)))
-ax5.set_xticklabels([f'D{d}' for d in decile_nums])
-ax5.legend(title='cd Level', fontsize=9, loc='upper right')
-ax5.grid(True, alpha=0.3, axis='y')
+# ax5.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
+# ax5.set_ylabel('Distribution (%)', fontsize=11)
+# ax5.set_title('Delinquency Level Distribution P(cd | Decile, Late)', fontsize=12, fontweight='bold')
+# ax5.set_xticks(range(len(decile_nums)))
+# ax5.set_xticklabels([f'D{d}' for d in decile_nums])
+# ax5.legend(title='cd Level', fontsize=9, loc='upper right')
+# ax5.grid(True, alpha=0.3, axis='y')
 
-plt.suptitle(f'Decile Payment Profile - {PAYMENT_TERMS_MONTHS:.2f} Month Payment Terms', 
-             fontsize=16, fontweight='bold', y=0.995)
+# plt.suptitle(f'Decile Payment Profile - {PAYMENT_TERMS_MONTHS:.2f} Month Payment Terms', 
+#              fontsize=16, fontweight='bold', y=0.995)
 
-viz_file = OUTPUT_DIR / 'decile_payment_profile.png'
-plt.savefig(viz_file, dpi=300, bbox_inches='tight')
-print(f"✓ Saved visualization to: {viz_file}")
-plt.close()
+# viz_file = OUTPUT_DIR / 'decile_payment_profile.png'
+# plt.savefig(viz_file, dpi=300, bbox_inches='tight')
+# print(f"✓ Saved visualization to: {viz_file}")
+# plt.close()
 
 # ================================================================
 # Summary

@@ -1,16 +1,24 @@
 """
-FY2025_simulation_with_decile_profiles.py
-==========================================
+FY2025_simulation_with_cd_timing.py
+====================================
 Simulate FY2025 invoice payments using decile payment profiles.
+
+MODIFIED: Uses cd level to determine payment timing
+- cd level is sampled from P(cd | late) distribution
+- Payment timing is determined by cd level mapping:
+  cd=3: 60 days, cd=4: 90 days, cd=5: 120 days, etc.
 
 Key approach:
 1. Sort invoices by total_undiscounted_price
 2. Map each invoice to appropriate decile
-3. Apply decile-specific P(late) and payment timing
-4. Calculate interest for both discount scenarios
+3. Apply decile-specific P(late)
+4. If late, sample cd level from P(cd | late)
+5. Use cd level to determine days overdue
+6. Calculate interest for both discount scenarios
 
 Author: Chris
 Date: January 2026
+Modified: January 2026 - cd-based payment timing
 """
 
 import pandas as pd
@@ -37,7 +45,28 @@ PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
 FY2025_START = pd.Timestamp("2024-04-01")
 FY2025_END = pd.Timestamp("2025-03-31")
 
-OUTPUT_DIR = "FY2025_outputs_decile"
+OUTPUT_DIR = "FY2025_outputs_cd_timing"
+
+# ================================================================
+# CD LEVEL TO PAYMENT TIMING MAPPING
+# ================================================================
+CD_TO_DAYS = {
+    2: 30, 
+    3: 60,   # cd=3: 60 days overdue
+    4: 90,   # cd=4: 90 days overdue
+    5: 120,  # cd=5: 120 days overdue
+    6: 150,  # cd=6: 150 days overdue
+    7: 180,  # cd=7: 180 days overdue
+    8: 210,  # cd=8: 210 days overdue
+    9: 240   # cd=9: 240 days overdue
+}
+
+print("\n" + "="*70)
+print("CD LEVEL TO PAYMENT TIMING MAPPING")
+print("="*70)
+for cd, days in sorted(CD_TO_DAYS.items()):
+    months = days / 30
+    print(f"  cd = {cd}: {days} days ({months:.1f} months) overdue")
 
 # Create output directory if it doesn't exist
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -47,7 +76,7 @@ np.random.seed(RANDOM_SEED)
 # ================================================================
 # Load invoice data
 # ================================================================
-print("="*70)
+print("\n" + "="*70)
 print("LOADING INVOICE DATA")
 print("="*70)
 
@@ -122,19 +151,35 @@ print("LOADING DECILE PAYMENT PROFILE")
 print("="*70)
 
 try:
-    with open('Payment Profile/decile_payment_profile.pkl', 'rb') as f:
-        decile_profile = pickle.load(f)
+    # Try to load MODIFIED profile first
+    try:
+        with open('Payment Profile/decile_payment_profile_MODIFIED.pkl', 'rb') as f:
+            decile_profile = pickle.load(f)
+        profile_version = "MODIFIED"
+    except FileNotFoundError:
+        with open('Payment Profile/decile_payment_profile.pkl', 'rb') as f:
+            decile_profile = pickle.load(f)
+        profile_version = "ORIGINAL"
     
     n_deciles = decile_profile['metadata']['n_deciles']
-    print(f"✓ Loaded decile payment profile")
+    print(f"✓ Loaded decile payment profile ({profile_version})")
     print(f"  Number of deciles: {n_deciles}")
     print(f"  Payment terms: {decile_profile['metadata']['payment_terms_months']:.2f} months")
     print(f"  Method: {decile_profile['metadata']['method']}")
     
+    # Check if cd_given_late exists in the profile
+    sample_decile = decile_profile['deciles']['decile_0']
+    if 'cd_given_late' in sample_decile['delinquency_distribution']:
+        print(f"  ✓ Profile contains cd distribution for late payments")
+    else:
+        print(f"  ⚠ WARNING: Profile does not contain cd_given_late distribution")
+        print(f"    Please run the MODIFIED version of 09.5_Decile_payment_profile.py")
+    
 except FileNotFoundError:
     print("✗ ERROR: Decile payment profile not found!")
-    print("  Expected location: Payment Profile/decile_payment_profile.pkl")
-    print("  Please run 09.5_Decile_payment_profile.py first")
+    print("  Expected location: Payment Profile/decile_payment_profile_MODIFIED.pkl")
+    print("  OR: Payment Profile/decile_payment_profile.pkl")
+    print("  Please run 09.5_Decile_payment_profile_MODIFIED.py first")
     exit()
 
 # ================================================================
@@ -166,16 +211,18 @@ decile_dist.columns = ['count', 'min_amount', 'max_amount', 'avg_amount']
 print(decile_dist.to_string())
 
 # ================================================================
-# Simulation function using decile profiles
+# Simulation function using decile profiles with cd-based timing
 # ================================================================
-def simulate_with_decile_profiles(invoices_df, decile_profile_dict, discount_scenario):
+def simulate_with_cd_timing(invoices_df, decile_profile_dict, discount_scenario, cd_to_days_map):
     """
     Simulate invoice payments using decile-specific payment behavior
+    with cd level determining payment timing
     
     Parameters:
     - invoices_df: DataFrame with invoice data (must have 'decile' column)
     - decile_profile_dict: Decile payment profile dictionary
     - discount_scenario: 'with_discount' or 'no_discount'
+    - cd_to_days_map: Dictionary mapping cd level to days overdue
     
     Returns:
     - DataFrame with simulated payment details
@@ -185,8 +232,10 @@ def simulate_with_decile_profiles(invoices_df, decile_profile_dict, discount_sce
     
     # Initialize arrays for simulation results
     is_late_array = np.zeros(n_invoices, dtype=bool)
-    months_overdue_array = np.zeros(n_invoices, dtype=float)
+    days_overdue_array = np.zeros(n_invoices, dtype=float)
     cd_level_array = np.zeros(n_invoices, dtype=int)
+    
+    print(f"\nSimulating {n_invoices:,} invoices...")
     
     # Simulate payment behavior for each invoice based on its decile
     for idx, row in simulated.iterrows():
@@ -199,25 +248,17 @@ def simulate_with_decile_profiles(invoices_df, decile_profile_dict, discount_sce
         
         decile_data = decile_profile_dict['deciles'][decile_key]
         
-        # 1. Determine if payment is late based on P(late)
+        # ================================================================
+        # STEP 1: Determine if payment is late based on P(late)
+        # ================================================================
         prob_late = decile_data['payment_behavior']['prob_late']
         is_late = np.random.random() < prob_late
         is_late_array[idx] = is_late
         
         if is_late:
-            # 2. If late, sample months overdue from distribution
-            avg_months_overdue = decile_data['payment_behavior']['avg_months_overdue_given_late']
-            
-            # Use exponential distribution centered on average
-            # (payment times are typically right-skewed)
-            if avg_months_overdue > 0:
-                months_overdue = np.random.exponential(avg_months_overdue)
-            else:
-                months_overdue = 0
-            
-            months_overdue_array[idx] = months_overdue
-            
-            # 3. Sample cd level from P(cd | late) distribution
+            # ================================================================
+            # STEP 2: If late, sample cd level from P(cd | late) distribution
+            # ================================================================
             cd_given_late = decile_data['delinquency_distribution']['cd_given_late']
             
             if cd_given_late:
@@ -228,19 +269,34 @@ def simulate_with_decile_profiles(invoices_df, decile_profile_dict, discount_sce
                 cd_probs = np.array(cd_probs)
                 cd_probs = cd_probs / cd_probs.sum()
                 
+                # Sample cd level
                 cd_level = np.random.choice(cd_levels, p=cd_probs)
                 cd_level_array[idx] = cd_level
+                
+                # ================================================================
+                # STEP 3: Use cd level to determine days overdue
+                # ================================================================
+                if cd_level in cd_to_days_map:
+                    days_overdue = cd_to_days_map[cd_level]
+                else:
+                    # Default fallback if cd level not in mapping
+                    print(f"⚠ Warning: cd level {cd_level} not in mapping, using 90 days")
+                    days_overdue = 90
+                
+                days_overdue_array[idx] = days_overdue
             else:
+                # No cd distribution available, use default
                 cd_level_array[idx] = 0
+                days_overdue_array[idx] = 60  # Default to 60 days
         else:
             # On-time payment
-            months_overdue_array[idx] = 0
+            days_overdue_array[idx] = 0
             cd_level_array[idx] = 0
     
     # Add simulation results to dataframe
     simulated['is_late'] = is_late_array
-    simulated['months_overdue'] = months_overdue_array
-    simulated['days_overdue'] = months_overdue_array * 30  # Convert to days
+    simulated['days_overdue'] = days_overdue_array
+    simulated['months_overdue'] = days_overdue_array / 30  # Convert to months
     simulated['cd_level'] = cd_level_array
     
     # Calculate dates
@@ -289,23 +345,25 @@ def simulate_with_decile_profiles(invoices_df, decile_profile_dict, discount_sce
 # Run both scenarios for FY2025
 # ================================================================
 print("\n" + "="*70)
-print("RUNNING SIMULATIONS FOR FY2025 USING DECILE PROFILES")
+print("RUNNING SIMULATIONS FOR FY2025 USING CD-BASED TIMING")
 print("="*70)
 
 # Scenario 1: With early payment discount
 print("\nScenario 1: With early payment discount...")
-with_discount = simulate_with_decile_profiles(
+with_discount = simulate_with_cd_timing(
     fy2025_df, 
     decile_profile, 
-    discount_scenario='with_discount'
+    discount_scenario='with_discount',
+    cd_to_days_map=CD_TO_DAYS
 )
 
 # Scenario 2: No discount
 print("Scenario 2: No discount offered...")
-no_discount = simulate_with_decile_profiles(
+no_discount = simulate_with_cd_timing(
     fy2025_df, 
     decile_profile, 
-    discount_scenario='no_discount'
+    discount_scenario='no_discount',
+    cd_to_days_map=CD_TO_DAYS
 )
 
 print("✓ Simulations complete")
@@ -341,7 +399,14 @@ def print_scenario_summary(df, scenario_name):
         print(f"\n  Delinquency level (cd) distribution (late payments only):")
         cd_dist = df[df['is_late']]['cd_level'].value_counts().sort_index()
         for cd, count in cd_dist.items():
-            print(f"    cd = {cd}: {count:,} ({count/n_late*100:.1f}%)")
+            days = CD_TO_DAYS.get(cd, 'N/A')
+            print(f"    cd = {cd}: {count:,} ({count/n_late*100:.1f}%) [{days} days]")
+        
+        # Show days overdue distribution
+        print(f"\n  Days overdue distribution (late payments only):")
+        days_dist = df[df['is_late']]['days_overdue'].value_counts().sort_index()
+        for days, count in days_dist.items():
+            print(f"    {days:.0f} days: {count:,} ({count/n_late*100:.1f}%)")
     
     # Invoice amounts (what customers owe - not your revenue)
     print(f"\nTotal Invoice Amounts (Customer Obligations):")
@@ -381,14 +446,14 @@ def print_scenario_summary(df, scenario_name):
     }
 
 # Print summaries
-summary_with = print_scenario_summary(with_discount, "FY2025 - WITH EARLY PAYMENT DISCOUNT")
-summary_no = print_scenario_summary(no_discount, "FY2025 - NO DISCOUNT (INTEREST ON ALL)")
+summary_with = print_scenario_summary(with_discount, "FY2025 - WITH EARLY PAYMENT DISCOUNT (CD-BASED TIMING)")
+summary_no = print_scenario_summary(no_discount, "FY2025 - NO DISCOUNT (CD-BASED TIMING)")
 
 # ================================================================
 # Comparison
 # ================================================================
 print("\n" + "="*70)
-print("DIRECT COMPARISON - FY2025")
+print("DIRECT COMPARISON - FY2025 (CD-BASED TIMING)")
 print("="*70)
 
 revenue_diff = summary_no['total_revenue'] - summary_with['total_revenue']
@@ -415,163 +480,67 @@ print(f"  No Discount: {summary_no['pct_late']:.1f}% late")
 # Create comparison DataFrame
 # ================================================================
 comparison_df = pd.DataFrame([summary_with, summary_no])
-output_csv = os.path.join(OUTPUT_DIR, 'FY2025_decile_comparison_summary.csv')
+output_csv = os.path.join(OUTPUT_DIR, 'FY2025_cd_timing_comparison_summary.csv')
 comparison_df.to_csv(output_csv, index=False)
 print(f"\n✓ Saved comparison summary to: {output_csv}")
 
-# # ================================================================
-# # Save detailed simulations
-# # ================================================================
-# output_excel = os.path.join(OUTPUT_DIR, 'FY2025_decile_detailed_simulations.xlsx')
-# with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
-#     with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
-#     no_discount.to_excel(writer, sheet_name='No_Discount', index=False)
-#     comparison_df.to_excel(writer, sheet_name='Summary_Comparison', index=False)
+# ================================================================
+# Save detailed simulations
+# ================================================================
+output_excel = os.path.join(OUTPUT_DIR, 'FY2025_cd_timing_detailed_simulations.xlsx')
+with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
+    with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
+    no_discount.to_excel(writer, sheet_name='No_Discount', index=False)
+    comparison_df.to_excel(writer, sheet_name='Summary_Comparison', index=False)
 
-# print(f"✓ Saved detailed simulations to: {output_excel}")
+print(f"✓ Saved detailed simulations to: {output_excel}")
 
-# # ================================================================
-# # Visualization: Monthly revenue comparison
-# # ================================================================
-# print("\n" + "="*70)
-# print("CREATING VISUALIZATIONS")
-# print("="*70)
+# ================================================================
+# Create cd level analysis
+# ================================================================
+print("\n" + "="*70)
+print("CD LEVEL ANALYSIS")
+print("="*70)
 
-# # Monthly aggregation
-# def aggregate_by_month(df, scenario_name):
-#     """Aggregate revenue by month"""
-#     monthly = df.groupby(df['invoice_period'].dt.to_period('M')).agg({
-#         'total_undiscounted_price': 'sum',
-#         'total_discounted_price': 'sum',
-#         'discount_amount': 'sum',
-#         'interest_charged': 'sum',
-#         'credit_card_revenue': 'sum',
-#         'is_late': 'sum'
-#     }).reset_index()
+cd_analysis = []
+for scenario_name, df in [("With Discount", with_discount), ("No Discount", no_discount)]:
+    late_payments = df[df['is_late']].copy()
     
-#     monthly['invoice_period'] = monthly['invoice_period'].dt.to_timestamp()
-#     monthly['scenario'] = scenario_name
-#     monthly['n_invoices'] = df.groupby(df['invoice_period'].dt.to_period('M')).size().values
-#     monthly['pct_late'] = (monthly['is_late'] / monthly['n_invoices']) * 100
+    if len(late_payments) > 0:
+        cd_summary = late_payments.groupby('cd_level').agg({
+            'interest_charged': ['sum', 'mean', 'count'],
+            'days_overdue': 'mean',
+            'principal_amount': 'mean'
+        })
+        
+        cd_summary.columns = ['total_interest', 'avg_interest', 'count', 'avg_days', 'avg_principal']
+        cd_summary['scenario'] = scenario_name
+        cd_summary['cd_level'] = cd_summary.index
+        
+        cd_analysis.append(cd_summary.reset_index(drop=True))
+
+if cd_analysis:
+    cd_analysis_df = pd.concat(cd_analysis, ignore_index=True)
+    cd_analysis_file = os.path.join(OUTPUT_DIR, 'cd_level_analysis.csv')
+    cd_analysis_df.to_csv(cd_analysis_file, index=False)
+    print(f"✓ Saved cd level analysis to: {cd_analysis_file}")
     
-#     return monthly
+    print("\nCD Level Revenue Summary:")
+    print(cd_analysis_df.to_string())
 
-# monthly_with = aggregate_by_month(with_discount, 'With Discount')
-# monthly_no = aggregate_by_month(no_discount, 'No Discount')
-
-# # Calculate cumulative values
-# monthly_with['cumulative_revenue'] = monthly_with['credit_card_revenue'].cumsum()
-# monthly_no['cumulative_revenue'] = monthly_no['credit_card_revenue'].cumsum()
-
-# # Create visualization
-# fig, axes = plt.subplots(2, 2, figsize=(20, 12))
-
-# # ================================================================
-# # Plot 1: Cumulative Revenue Comparison
-# # ================================================================
-# ax1 = axes[0, 0]
-
-# ax1.plot(monthly_with['invoice_period'], monthly_with['cumulative_revenue'], 
-#          marker='o', linewidth=2.5, label='With Discount', color='#70AD47')
-# ax1.plot(monthly_no['invoice_period'], monthly_no['cumulative_revenue'], 
-#          marker='s', linewidth=2.5, label='No Discount', color='#4472C4')
-
-# ax1.set_title('FY2025 - Cumulative Credit Card Revenue (Using Decile Profiles)', 
-#               fontsize=14, fontweight='bold')
-# ax1.set_xlabel('Month', fontsize=12)
-# ax1.set_ylabel('Cumulative Revenue ($)', fontsize=12)
-# ax1.legend(loc='upper left', fontsize=11)
-# ax1.grid(True, alpha=0.3)
-# ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-
-# # ================================================================
-# # Plot 2: Monthly Interest Revenue
-# # ================================================================
-# ax2 = axes[0, 1]
-
-# width = 15
-# x_with = monthly_with['invoice_period'] - pd.Timedelta(days=width/2)
-# x_no = monthly_no['invoice_period'] + pd.Timedelta(days=width/2)
-
-# ax2.bar(x_with, monthly_with['interest_charged'], width=width, 
-#         label='Interest (With Discount)', color='#70AD47', alpha=0.7)
-
-# ax2.bar(x_no, monthly_no['interest_charged'], width=width, 
-#         label='Interest (No Discount)', color='#4472C4', alpha=0.7)
-
-# ax2.set_title('FY2025 - Monthly Interest Revenue', 
-#               fontsize=14, fontweight='bold')
-# ax2.set_xlabel('Month', fontsize=12)
-# ax2.set_ylabel('Monthly Interest Revenue ($)', fontsize=12)
-# ax2.legend(loc='upper left', fontsize=9)
-# ax2.grid(True, alpha=0.3, axis='y')
-# ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-
-# # ================================================================
-# # Plot 3: Monthly Late Payment Rate
-# # ================================================================
-# ax3 = axes[1, 0]
-
-# ax3.plot(monthly_with['invoice_period'], monthly_with['pct_late'], 
-#          marker='o', linewidth=2.5, label='With Discount', color='#70AD47')
-# ax3.plot(monthly_no['invoice_period'], monthly_no['pct_late'], 
-#          marker='s', linewidth=2.5, label='No Discount', color='#4472C4')
-
-# ax3.set_title('FY2025 - Monthly Late Payment Rate', 
-#               fontsize=14, fontweight='bold')
-# ax3.set_xlabel('Month', fontsize=12)
-# ax3.set_ylabel('% Late Payments', fontsize=12)
-# ax3.legend(loc='upper left', fontsize=11)
-# ax3.grid(True, alpha=0.3)
-
-# # ================================================================
-# # Plot 4: Revenue by Decile
-# # ================================================================
-# ax4 = axes[1, 1]
-
-# decile_revenue_with = with_discount.groupby('decile')['credit_card_revenue'].sum()
-# decile_revenue_no = no_discount.groupby('decile')['credit_card_revenue'].sum()
-
-# x_pos = np.arange(len(decile_revenue_with))
-# width = 0.35
-
-# ax4.bar(x_pos - width/2, decile_revenue_with, width, 
-#         label='With Discount', color='#70AD47', alpha=0.7)
-# ax4.bar(x_pos + width/2, decile_revenue_no, width, 
-#         label='No Discount', color='#4472C4', alpha=0.7)
-
-# ax4.set_title('FY2025 - Total Revenue by Decile', 
-#               fontsize=14, fontweight='bold')
-# ax4.set_xlabel('Decile (by Invoice Amount)', fontsize=12)
-# ax4.set_ylabel('Total Revenue ($)', fontsize=12)
-# ax4.set_xticks(x_pos)
-# ax4.set_xticklabels([f'D{i}' for i in decile_revenue_with.index])
-# ax4.legend(loc='upper left', fontsize=11)
-# ax4.grid(True, alpha=0.3, axis='y')
-# ax4.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-
-# # Format x-axes
-# for ax in [axes[0, 0], axes[0, 1], axes[1, 0]]:
-#     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-#     ax.tick_params(axis='x', rotation=45)
-
-# plt.tight_layout()
-# output_viz = os.path.join(OUTPUT_DIR, 'FY2025_decile_revenue_analysis.png')
-# plt.savefig(output_viz, dpi=300, bbox_inches='tight')
-# print(f"✓ Saved visualization to: {output_viz}")
-
-# plt.show()
-
-# print("\n" + "="*70)
-# print("ANALYSIS COMPLETE - FY2025 WITH DECILE PROFILES")
-# print("="*70)
-# print(f"\nAll results saved to folder: {OUTPUT_DIR}/")
-# print("Files created:")
-# print(f"  1. FY2025_decile_comparison_summary.csv - Summary comparison table")
-# print(f"  2. FY2025_decile_detailed_simulations.xlsx - Full simulation data")
-# print(f"  3. FY2025_decile_revenue_analysis.png - 4-panel visualization")
-# print("\nDecile-based simulation used:")
-# print(f"  - {n_deciles} deciles based on invoice amount")
-# print(f"  - Decile-specific late payment probabilities")
-# print(f"  - Conditional delinquency level (cd) distributions")
-# print("="*70)
+print("\n" + "="*70)
+print("ANALYSIS COMPLETE - FY2025 WITH CD-BASED TIMING")
+print("="*70)
+print(f"\nAll results saved to folder: {OUTPUT_DIR}/")
+print("Files created:")
+print(f"  1. FY2025_cd_timing_comparison_summary.csv - Summary comparison table")
+print(f"  2. FY2025_cd_timing_detailed_simulations.xlsx - Full simulation data")
+print(f"  3. cd_level_analysis.csv - Revenue breakdown by cd level")
+print("\nSimulation approach:")
+print(f"  - {n_deciles} deciles based on invoice amount")
+print(f"  - Decile-specific late payment probabilities")
+print(f"  - cd level sampled from P(cd | late, decile)")
+print(f"  - Payment timing determined by cd level:")
+for cd, days in sorted(CD_TO_DAYS.items()):
+    print(f"      cd={cd} → {days} days ({days/30:.1f} months)")
+print("="*70)

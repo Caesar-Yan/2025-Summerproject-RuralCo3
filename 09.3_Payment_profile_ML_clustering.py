@@ -1,19 +1,23 @@
 """
-09.5_Decile_payment_profile.py
-===============================
+09.5_Decile_payment_profile_MODIFIED.py
+========================================
 Create payment behavior profile based on InvoiceAmount deciles.
+
+MODIFICATION: For late accounts, directly sample cd level distribution
+from the actual cd values present in late accounts for that decile.
 
 Strategy:
 1. Order accounts by InvoiceAmount
 2. Create 10 equal-sized deciles
 3. For each decile:
    - P(late) = probability Late = 1
-   - P(cd = k | late) = distribution of delinquency levels given late
+   - P(cd = k | late) = actual distribution of cd values in late accounts
 
 This can be directly mapped to invoice data by invoice amount.
 
 Author: Chris
 Date: January 2026
+Modified: January 2026 - Direct cd sampling from late accounts
 """
 
 import pandas as pd
@@ -21,6 +25,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 from pathlib import Path
+
+import os
+
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(SCRIPT_DIR)
+print(f"Working directory set to: {os.getcwd()}")
 
 # ================================================================
 # Configuration
@@ -92,12 +103,6 @@ print(f"  Median: {df['avg_time_between_payments'].median():.2f} months")
 print(f"  Min: {df['avg_time_between_payments'].min():.2f} months")
 print(f"  Max: {df['avg_time_between_payments'].max():.2f} months")
 
-print(f"\nInvoiceAmount distribution:")
-print(f"  Mean: ${df['InvoiceAmount'].mean():,.2f}")
-print(f"  Median: ${df['InvoiceAmount'].median():,.2f}")
-print(f"  Min: ${df['InvoiceAmount'].min():,.2f}")
-print(f"  Max: ${df['InvoiceAmount'].max():,.2f}")
-
 print(f"\nDelinquency level (cd) distribution:")
 cd_dist = df['cd'].value_counts().sort_index()
 for cd_level, count in cd_dist.items():
@@ -143,8 +148,9 @@ payment_profile = {
         'payment_terms_months': PAYMENT_TERMS_MONTHS,
         'payment_terms_days': PAYMENT_TERMS_MONTHS * 30,
         'n_deciles': actual_n_deciles,
-        'method': 'equal-sized deciles by InvoiceAmount',
-        'metric': 'avg_time_between_payments (months)'
+        'method': 'equal-sized deciles by InvoiceAmount with direct cd sampling',
+        'metric': 'avg_time_between_payments (months)',
+        'cd_sampling_method': 'Direct sampling from late accounts only'
     },
     'deciles': {}
 }
@@ -190,29 +196,49 @@ for decile_num in sorted(df['decile'].unique()):
         median_months_overdue = 0
     
     # ================================================================
-    # DELINQUENCY LEVEL DISTRIBUTION (CONDITIONAL ON LATE)
+    # DELINQUENCY LEVEL DISTRIBUTION (DIRECT SAMPLING FROM LATE ACCOUNTS)
     # ================================================================
     print(f"\nDelinquency Level Distribution (cd) | Given Late:")
+    print(f"  [MODIFIED: Direct sampling from late accounts only]")
     
     # Overall cd distribution in this decile
     cd_distribution_all = decile_data['cd'].value_counts(normalize=True).sort_index()
     
-    # cd distribution GIVEN late payment
+    # cd distribution GIVEN late payment - directly from late accounts
     if n_late > 0:
-        cd_distribution_late = late_payments['cd'].value_counts(normalize=True).sort_index()
+        # Get cd values for late accounts only
+        cd_values_late = late_payments['cd'].values
         
-        print(f"  {'cd':<4} {'All Accounts':<15} {'Late Only':<15}")
-        print(f"  {'-'*4} {'-'*15} {'-'*15}")
+        # Count occurrences of each cd level
+        cd_counts_late = late_payments['cd'].value_counts().sort_index()
         
-        # Get all unique cd levels in this decile
-        all_cd_levels = sorted(decile_data['cd'].unique())
+        # Calculate probabilities by dividing counts by total late accounts
+        cd_distribution_late = (cd_counts_late / n_late).sort_index()
+        
+        print(f"\n  {'cd':<4} {'Count (Late)':<15} {'Prob (Late)':<15} {'All Accounts':<15}")
+        print(f"  {'-'*4} {'-'*15} {'-'*15} {'-'*15}")
+        
+        # Get all unique cd levels in late payments
+        cd_levels_late = sorted(late_payments['cd'].unique())
         
         cd_given_late = {}
-        for cd_level in all_cd_levels:
+        for cd_level in cd_levels_late:
+            count_late = cd_counts_late.get(cd_level, 0)
+            prob_cd_late = cd_distribution_late.get(cd_level, 0)
             prob_all = cd_distribution_all.get(cd_level, 0)
-            prob_late = cd_distribution_late.get(cd_level, 0)
-            cd_given_late[int(cd_level)] = float(prob_late)
-            print(f"  {cd_level:<4} {prob_all*100:>6.1f}%        {prob_late*100:>6.1f}%")
+            
+            cd_given_late[int(cd_level)] = float(prob_cd_late)
+            print(f"  {cd_level:<4} {count_late:>6}          {prob_cd_late*100:>6.1f}%        {prob_all*100:>6.1f}%")
+        
+        print(f"\n  Total late accounts: {n_late}")
+        print(f"  Verification: Sum of probabilities = {sum(cd_given_late.values()):.4f}")
+        
+        # Additional verification: show raw counts
+        print(f"\n  Raw cd counts in late accounts:")
+        for cd_level in cd_levels_late:
+            count = cd_counts_late.get(cd_level, 0)
+            print(f"    cd = {cd_level}: {count} accounts")
+        
     else:
         print(f"  No late payments in this decile")
         cd_given_late = {}
@@ -241,8 +267,9 @@ for decile_num in sorted(df['decile'].unique()):
             'payment_terms_months': PAYMENT_TERMS_MONTHS
         },
         'delinquency_distribution': {
-            'cd_given_late': cd_given_late,  # P(cd = k | late)
-            'cd_overall': {int(k): float(v) for k, v in cd_distribution_all.items()}
+            'cd_given_late': cd_given_late,  # P(cd = k | late) - DIRECTLY SAMPLED FROM LATE ACCOUNTS
+            'cd_overall': {int(k): float(v) for k, v in cd_distribution_all.items()},
+            'sampling_method': 'direct_from_late_accounts'  # Flag for downstream use
         }
     }
     
@@ -256,6 +283,7 @@ for decile_num in sorted(df['decile'].unique()):
         'min_amount': f"${min_amount:,.2f}",
         'max_amount': f"${max_amount:,.2f}",
         'n_accounts': n_accounts,
+        'n_late': n_late,
         'prob_late_pct': f"{prob_late*100:.1f}%",
         'avg_months_overdue': f"{avg_months_overdue:.2f}",
         'avg_time_between_payments': f"{decile_data['avg_time_between_payments'].mean():.2f}"
@@ -278,141 +306,71 @@ print("SAVING PAYMENT PROFILE")
 print("="*70)
 
 # Save pickle
-output_file = OUTPUT_DIR / "decile_payment_profile.pkl"
+output_file = OUTPUT_DIR / "decile_payment_profile_MODIFIED.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(payment_profile, f)
 print(f"✓ Saved payment profile to: {output_file}")
 
 # Save CSV summary
 summary_df = pd.DataFrame(summary_rows)
-summary_file = OUTPUT_DIR / "decile_payment_profile_summary.csv"
+
+summary_file = OUTPUT_DIR / "decile_payment_profile_summary_MODIFIED.csv"
 summary_df.to_csv(summary_file, index=False)
 print(f"✓ Saved summary to: {summary_file}")
 
 # Save decile assignments
-decile_assignment_file = OUTPUT_DIR / "decile_assignments.csv"
+decile_assignment_file = OUTPUT_DIR / "decile_assignments_MODIFIED.csv"
 output_cols = ['InvoiceAmount', 'decile', 'avg_time_between_payments', 'cd', 'Late']
 df[output_cols].to_csv(decile_assignment_file, index=False)
 print(f"✓ Saved decile assignments to: {decile_assignment_file}")
 
-# # ================================================================
-# # Create visualizations
-# # ================================================================
-# print("\n" + "="*70)
-# print("CREATING VISUALIZATIONS")
-# print("="*70)
+# ================================================================
+# Create detailed cd distribution analysis
+# ================================================================
+print("\n" + "="*70)
+print("CD DISTRIBUTION ANALYSIS")
+print("="*70)
 
-# fig = plt.figure(figsize=(16, 12))
-# gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.3)
-
-# # Plot 1: Probability of late payment by decile
-# ax1 = fig.add_subplot(gs[0, 0])
-# prob_late_values = [float(row['prob_late_pct'].rstrip('%')) for _, row in summary_df.iterrows()]
-# decile_labels = [f"D{d}" for d in summary_df['decile']]
-# ax1.bar(range(len(summary_df)), prob_late_values, color='coral', alpha=0.7)
-# ax1.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
-# ax1.set_ylabel(f'Probability of Late Payment (%)', fontsize=11)
-# ax1.set_title(f'P(Late | Decile) - Avg Time Between Payments >{PAYMENT_TERMS_MONTHS:.2f} months', fontsize=12, fontweight='bold')
-# ax1.set_xticks(range(len(summary_df)))
-# ax1.set_xticklabels(decile_labels)
-# ax1.grid(True, alpha=0.3, axis='y')
-# for i, v in enumerate(prob_late_values):
-#     ax1.text(i, v, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
-
-# # Plot 2: Average time between payments by decile
-# ax2 = fig.add_subplot(gs[0, 1])
-# avg_time_between = [float(row['avg_time_between_payments']) for _, row in summary_df.iterrows()]
-# ax2.bar(range(len(summary_df)), avg_time_between, color='steelblue', alpha=0.7)
-# ax2.axhline(y=PAYMENT_TERMS_MONTHS, color='red', linestyle='--', linewidth=2, label=f'{PAYMENT_TERMS_MONTHS:.2f}-month terms')
-# ax2.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
-# ax2.set_ylabel('Avg Time Between Payments (months)', fontsize=11)
-# ax2.set_title('Average Time Between Payments by Decile', fontsize=12, fontweight='bold')
-# ax2.set_xticks(range(len(summary_df)))
-# ax2.set_xticklabels(decile_labels)
-# ax2.legend(fontsize=9)
-# ax2.grid(True, alpha=0.3, axis='y')
-
-# # Plot 3: InvoiceAmount range by decile
-# ax3 = fig.add_subplot(gs[1, 0])
-# min_amounts = [float(row['min_amount'].replace('$', '').replace(',', '')) for _, row in summary_df.iterrows()]
-# max_amounts = [float(row['max_amount'].replace('$', '').replace(',', '')) for _, row in summary_df.iterrows()]
-# ax3.bar(range(len(summary_df)), max_amounts, color='mediumseagreen', alpha=0.7, label='Max')
-# ax3.bar(range(len(summary_df)), min_amounts, color='lightgreen', alpha=0.7, label='Min')
-# ax3.set_xlabel('Decile', fontsize=11)
-# ax3.set_ylabel('InvoiceAmount ($)', fontsize=11)
-# ax3.set_title('InvoiceAmount Range by Decile', fontsize=12, fontweight='bold')
-# ax3.set_xticks(range(len(summary_df)))
-# ax3.set_xticklabels(decile_labels)
-# ax3.legend(fontsize=9)
-# ax3.grid(True, alpha=0.3, axis='y')
-
-# # Plot 4: Average months overdue (when late) by decile
-# ax4 = fig.add_subplot(gs[1, 1])
-# avg_overdue = [float(row['avg_months_overdue']) for _, row in summary_df.iterrows()]
-# ax4.bar(range(len(summary_df)), avg_overdue, color='indianred', alpha=0.7)
-# ax4.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
-# ax4.set_ylabel('Avg Months Overdue (when late)', fontsize=11)
-# ax4.set_title('Average Months Overdue by Decile', fontsize=12, fontweight='bold')
-# ax4.set_xticks(range(len(summary_df)))
-# ax4.set_xticklabels(decile_labels)
-# ax4.grid(True, alpha=0.3, axis='y')
-
-# # Plot 5: Delinquency level distribution across deciles (stacked bar)
-# ax5 = fig.add_subplot(gs[2, :])
-# decile_nums = sorted(df['decile'].unique())
-# cd_levels = sorted(df['cd'].unique())
-
-# # Build matrix of P(cd | decile, late)
-# cd_matrix = []
-# for decile_num in decile_nums:
-#     decile_profile = payment_profile['deciles'][f'decile_{decile_num}']
-#     cd_given_late = decile_profile['delinquency_distribution']['cd_given_late']
+cd_analysis = []
+for decile_num in sorted(df['decile'].unique()):
+    decile_profile = payment_profile['deciles'][f'decile_{decile_num}']
+    cd_given_late = decile_profile['delinquency_distribution']['cd_given_late']
     
-#     row = [cd_given_late.get(cd_level, 0) * 100 for cd_level in cd_levels]
-#     cd_matrix.append(row)
+    for cd_level, prob in cd_given_late.items():
+        cd_analysis.append({
+            'decile': decile_num,
+            'cd_level': cd_level,
+            'probability': prob,
+            'n_late_total': decile_profile['payment_behavior']['n_late']
+        })
 
-# cd_matrix = np.array(cd_matrix).T  # Transpose for stacking
-
-# # Create stacked bar
-# bottom = np.zeros(len(decile_nums))
-# colors = plt.cm.RdYlGn_r(np.linspace(0.2, 0.8, len(cd_levels)))
-
-# for i, cd_level in enumerate(cd_levels):
-#     ax5.bar(range(len(decile_nums)), cd_matrix[i], bottom=bottom, 
-#             label=f'cd={cd_level}', color=colors[i], alpha=0.8)
-#     bottom += cd_matrix[i]
-
-# ax5.set_xlabel('Decile (by InvoiceAmount)', fontsize=11)
-# ax5.set_ylabel('Distribution (%)', fontsize=11)
-# ax5.set_title('Delinquency Level Distribution P(cd | Decile, Late)', fontsize=12, fontweight='bold')
-# ax5.set_xticks(range(len(decile_nums)))
-# ax5.set_xticklabels([f'D{d}' for d in decile_nums])
-# ax5.legend(title='cd Level', fontsize=9, loc='upper right')
-# ax5.grid(True, alpha=0.3, axis='y')
-
-# plt.suptitle(f'Decile Payment Profile - {PAYMENT_TERMS_MONTHS:.2f} Month Payment Terms', 
-#              fontsize=16, fontweight='bold', y=0.995)
-
-# viz_file = OUTPUT_DIR / 'decile_payment_profile.png'
-# plt.savefig(viz_file, dpi=300, bbox_inches='tight')
-# print(f"✓ Saved visualization to: {viz_file}")
-# plt.close()
+cd_analysis_df = pd.DataFrame(cd_analysis)
+cd_analysis_file = OUTPUT_DIR / "cd_distribution_by_decile_MODIFIED.csv"
+cd_analysis_df.to_csv(cd_analysis_file, index=False)
+print(f"✓ Saved cd distribution analysis to: {cd_analysis_file}")
 
 # ================================================================
 # Summary
 # ================================================================
 print("\n" + "="*70)
-print("DECILE PAYMENT PROFILE COMPLETE!")
+print("DECILE PAYMENT PROFILE COMPLETE! (MODIFIED VERSION)")
 print("="*70)
 print(f"\nOutputs saved to: {OUTPUT_DIR}")
 print(f"\nKey files:")
-print(f"  1. decile_payment_profile.pkl - Profile for predictions")
-print(f"  2. decile_payment_profile_summary.csv - Human-readable summary")
-print(f"  3. decile_assignments.csv - All accounts with decile assignments")
+print(f"  1. decile_payment_profile_MODIFIED.pkl - Profile for predictions")
+print(f"  2. decile_payment_profile_summary_MODIFIED.csv - Human-readable summary")
+print(f"  3. decile_assignments_MODIFIED.csv - All accounts with decile assignments")
+print(f"  4. cd_distribution_by_decile_MODIFIED.csv - Detailed cd distribution")
 print(f"\nProfile contains {actual_n_deciles} deciles with equal sample sizes")
 print(f"Payment terms: {PAYMENT_TERMS_MONTHS:.2f} months (~{PAYMENT_TERMS_MONTHS * 30:.0f} days)")
+print(f"\nMODIFICATION APPLIED:")
+print(f"  - cd distributions are sampled DIRECTLY from late accounts only")
+print(f"  - P(cd = k | late) uses only the cd values present in late payments")
+print(f"  - Example: If 5 late accounts have cd=[3,3,3,4,4], then:")
+print(f"            P(cd=3|late) = 3/5 = 60%")
+print(f"            P(cd=4|late) = 2/5 = 40%")
 print(f"\nFor each decile, you have:")
 print(f"  - P(late): Probability of late payment (Late = 1)")
-print(f"  - P(cd = k | late): Delinquency level distribution given late")
+print(f"  - P(cd = k | late): cd level distribution FROM LATE ACCOUNTS ONLY")
 print(f"  - Avg months overdue (when late)")
 print(f"\nNext step: Map this profile to invoice data by invoice amount")
