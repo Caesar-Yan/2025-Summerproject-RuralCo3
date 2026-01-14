@@ -25,7 +25,6 @@ import os
 # CONFIGURATION
 # ================================================================
 ANNUAL_INTEREST_RATE = 0.2395  # 23.95% p.a.
-LATE_FEE = 10.00  # $10 per late invoice
 RANDOM_SEED = 42
 PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
 
@@ -57,6 +56,17 @@ invoice_grouped['customer_type'] = 'Invoice'
 combined_df = pd.concat([ats_grouped, invoice_grouped], ignore_index=True)
 
 print(f"Total invoices loaded: {len(combined_df):,}")
+
+# # ================================================================
+# # Filter out negative undiscounted prices (OPTIONAL - comment out if not needed)
+# # ================================================================
+# initial_count = len(combined_df)
+# combined_df = combined_df[combined_df['total_undiscounted_price'] >= 0].copy()
+# filtered_count = initial_count - len(combined_df)
+# if filtered_count > 0:
+#     print(f"⚠ Filtered out {filtered_count:,} invoices with negative undiscounted prices")
+# print(f"Remaining invoices: {len(combined_df):,}")
+# # ================================================================
 
 # ================================================================
 # Parse and filter dates for FY2025
@@ -259,16 +269,10 @@ def simulate_with_decile_profiles(invoices_df, decile_profile_dict, discount_sce
         simulated['days_overdue']
     )
     
-    # Late fees (only if late)
-    simulated['late_fee_charged'] = simulated['is_late'].astype(int) * LATE_FEE
-    
     # ================================================================
-    # Calculate total revenue
+    # Calculate total revenue (interest only)
     # ================================================================
-    simulated['credit_card_revenue'] = (
-        simulated['interest_charged'] + 
-        simulated['late_fee_charged']
-    )
+    simulated['credit_card_revenue'] = simulated['interest_charged']
     
     # Track total amounts
     simulated['total_invoice_amount_discounted'] = simulated['total_discounted_price']
@@ -334,16 +338,15 @@ def print_scenario_summary(df, scenario_name):
         for cd, count in cd_dist.items():
             print(f"    cd = {cd}: {count:,} ({count/n_late*100:.1f}%)")
     
-    # Invoice amounts
+    # Invoice amounts (what customers owe - not your revenue)
     print(f"\nTotal Invoice Amounts (Customer Obligations):")
     print(f"  Undiscounted invoice total: ${df['total_undiscounted_price'].sum():,.2f}")
     print(f"  Discounted invoice total: ${df['total_discounted_price'].sum():,.2f}")
     print(f"  Discount amount: ${df['discount_amount'].sum():,.2f}")
     
     # Credit Card Revenue
-    print(f"\nCredit Card Company Revenue (Interest + Late Fees):")
+    print(f"\nCredit Card Company Revenue (Interest Only):")
     print(f"  Interest revenue: ${df['interest_charged'].sum():,.2f}")
-    print(f"  Late fee revenue: ${df['late_fee_charged'].sum():,.2f}")
     print(f"  Total revenue: ${df['credit_card_revenue'].sum():,.2f}")
     
     # Decile breakdown
@@ -369,7 +372,6 @@ def print_scenario_summary(df, scenario_name):
         'total_discounted': df['total_discounted_price'].sum(),
         'discount_amount': df['discount_amount'].sum(),
         'interest_revenue': df['interest_charged'].sum(),
-        'late_fee_revenue': df['late_fee_charged'].sum(),
         'total_revenue': df['credit_card_revenue'].sum()
     }
 
@@ -386,7 +388,7 @@ print("="*70)
 
 revenue_diff = summary_no['total_revenue'] - summary_with['total_revenue']
 
-print(f"\nCredit Card Revenue (Interest + Late Fees):")
+print(f"\nCredit Card Revenue (Interest Only):")
 print(f"  No Discount scenario: ${summary_no['total_revenue']:,.2f}")
 print(f"  With Discount scenario: ${summary_with['total_revenue']:,.2f}")
 print(f"  Difference: ${revenue_diff:+,.2f}")
@@ -400,10 +402,6 @@ else:
     pct_more = (abs(revenue_diff) / summary_no['total_revenue']) * 100
     print(f"  ({pct_more:.1f}% more than no discount)")
 
-print(f"\nRevenue Breakdown:")
-print(f"  Interest revenue difference: ${summary_no['interest_revenue'] - summary_with['interest_revenue']:+,.2f}")
-print(f"  Late fee revenue difference: ${summary_no['late_fee_revenue'] - summary_with['late_fee_revenue']:+,.2f}")
-
 print(f"\nLate Payment Rates:")
 print(f"  With Discount: {summary_with['pct_late']:.1f}% late")
 print(f"  No Discount: {summary_no['pct_late']:.1f}% late")
@@ -416,16 +414,16 @@ output_csv = os.path.join(OUTPUT_DIR, 'FY2025_decile_comparison_summary.csv')
 comparison_df.to_csv(output_csv, index=False)
 print(f"\n✓ Saved comparison summary to: {output_csv}")
 
-# ================================================================
-# Save detailed simulations
-# ================================================================
-output_excel = os.path.join(OUTPUT_DIR, 'FY2025_decile_detailed_simulations.xlsx')
-with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
-    with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
-    no_discount.to_excel(writer, sheet_name='No_Discount', index=False)
-    comparison_df.to_excel(writer, sheet_name='Summary_Comparison', index=False)
+# # ================================================================
+# # Save detailed simulations
+# # ================================================================
+# output_excel = os.path.join(OUTPUT_DIR, 'FY2025_decile_detailed_simulations.xlsx')
+# with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
+#     with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
+#     no_discount.to_excel(writer, sheet_name='No_Discount', index=False)
+#     comparison_df.to_excel(writer, sheet_name='Summary_Comparison', index=False)
 
-print(f"✓ Saved detailed simulations to: {output_excel}")
+# print(f"✓ Saved detailed simulations to: {output_excel}")
 
 # # ================================================================
 # # Visualization: Monthly revenue comparison
@@ -442,7 +440,6 @@ print(f"✓ Saved detailed simulations to: {output_excel}")
 #         'total_discounted_price': 'sum',
 #         'discount_amount': 'sum',
 #         'interest_charged': 'sum',
-#         'late_fee_charged': 'sum',
 #         'credit_card_revenue': 'sum',
 #         'is_late': 'sum'
 #     }).reset_index()
@@ -483,7 +480,7 @@ print(f"✓ Saved detailed simulations to: {output_excel}")
 # ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
 
 # # ================================================================
-# # Plot 2: Monthly Revenue Components
+# # Plot 2: Monthly Interest Revenue
 # # ================================================================
 # ax2 = axes[0, 1]
 
@@ -493,20 +490,14 @@ print(f"✓ Saved detailed simulations to: {output_excel}")
 
 # ax2.bar(x_with, monthly_with['interest_charged'], width=width, 
 #         label='Interest (With Discount)', color='#70AD47', alpha=0.7)
-# ax2.bar(x_with, monthly_with['late_fee_charged'], width=width, 
-#         bottom=monthly_with['interest_charged'],
-#         label='Late Fees (With Discount)', color='#A9D18E', alpha=0.7)
 
 # ax2.bar(x_no, monthly_no['interest_charged'], width=width, 
 #         label='Interest (No Discount)', color='#4472C4', alpha=0.7)
-# ax2.bar(x_no, monthly_no['late_fee_charged'], width=width, 
-#         bottom=monthly_no['interest_charged'],
-#         label='Late Fees (No Discount)', color='#8FAADC', alpha=0.7)
 
-# ax2.set_title('FY2025 - Monthly Revenue: Interest vs Late Fees', 
+# ax2.set_title('FY2025 - Monthly Interest Revenue', 
 #               fontsize=14, fontweight='bold')
 # ax2.set_xlabel('Month', fontsize=12)
-# ax2.set_ylabel('Monthly Revenue ($)', fontsize=12)
+# ax2.set_ylabel('Monthly Interest Revenue ($)', fontsize=12)
 # ax2.legend(loc='upper left', fontsize=9)
 # ax2.grid(True, alpha=0.3, axis='y')
 # ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))

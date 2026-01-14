@@ -63,7 +63,13 @@ else:
     print("⚠ Cannot create InvoiceAmount - missing required columns")
 
 
-
+# combined delinquent column
+print("\nCreating derived feature...")
+if 'is_delinquent' in df.columns and 'is_seriously_delinquent' in df.columns:
+    df['Late'] = ((df['is_delinquent'] == 1) | (df['is_seriously_delinquent'] == 1)).astype(int)
+    print(f"✓ Created 'Late' feature")
+else:
+    print("⚠ Cannot create Late - missing required columns")
 
 print(f"\nSaving to: {OUTPUT_FILE}")
 df.to_csv(OUTPUT_FILE, index=False)
