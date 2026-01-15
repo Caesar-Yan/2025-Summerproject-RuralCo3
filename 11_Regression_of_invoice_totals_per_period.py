@@ -23,6 +23,11 @@ import os
 import warnings
 warnings.filterwarnings('ignore')
 
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(SCRIPT_DIR)
+print(f"Working directory set to: {os.getcwd()}")
+
 # ================================================================
 # CONFIGURATION
 # ================================================================

@@ -1,5 +1,5 @@
 """
-09.5_Decile_payment_profile_MODIFIED.py
+09.3_Payment_profile_ML_clustering.py
 ========================================
 Create payment behavior profile based on InvoiceAmount deciles.
 
