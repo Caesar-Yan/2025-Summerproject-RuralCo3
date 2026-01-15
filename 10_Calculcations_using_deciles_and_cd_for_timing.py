@@ -42,8 +42,8 @@ RANDOM_SEED = 42
 PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
 
 # New Zealand FY2025 definition (April 1, 2024 - March 31, 2025)
-FY2025_START = pd.Timestamp("2024-04-01")
-FY2025_END = pd.Timestamp("2025-03-31")
+FY2025_START = pd.Timestamp("2024-07-01")
+FY2025_END = pd.Timestamp("2025-06-30")
 
 OUTPUT_DIR = "FY2025_outputs_cd_timing"
 
