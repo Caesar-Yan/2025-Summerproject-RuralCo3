@@ -1,0 +1,716 @@
+"""
+10.3_FY2025_add_discount_amt_to_revenue.py
+====================================
+Apply calibrated payment profiles to FY2025 data to estimate revenue.
+
+MODIFICATION: For late invoices, add the discount amount to revenue
+- NO DISCOUNT scenario: interest + retained discounts (late invoices don't get discount)
+- WITH DISCOUNT scenario: interest only (on-time invoices get discount)
+
+This script:
+1. Loads both calibrated profiles (MULTIPLIER and UNIFORM)
+2. Applies each to FY2025 invoices
+3. For late invoices in NO DISCOUNT scenario: adds discount_amount to revenue
+4. Generates revenue estimates for both discount scenarios
+5. Creates comprehensive visualizations showing interest + retained discounts
+6. Compares results between the two calibration methods
+
+Author: Chris
+Date: January 2026
+"""
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.patches import Patch
+import pickle
+import os
+
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(SCRIPT_DIR)
+print(f"Working directory set to: {os.getcwd()}")
+
+# ================================================================
+# CONFIGURATION
+# ================================================================
+ANNUAL_INTEREST_RATE = 0.2395  # 23.95% p.a.
+RANDOM_SEED = 42
+PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
+
+# New Zealand FY2025 definition
+FY2025_START = pd.Timestamp("2024-07-01")
+FY2025_END = pd.Timestamp("2025-06-30")
+
+OUTPUT_DIR = "FY2025_outputs_WITH_RETAINED_DISCOUNTS"
+
+# CD level to payment timing mapping
+CD_TO_DAYS = {
+    2: 30, 
+    3: 60,
+    4: 90,
+    5: 120,
+    6: 150,
+    7: 180,
+    8: 210,
+    9: 240
+}
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+np.random.seed(RANDOM_SEED)
+
+print("\n" + "="*70)
+print("APPLYING CALIBRATED PROFILES TO FY2025 DATA")
+print("WITH RETAINED DISCOUNTS FOR LATE PAYMENTS")
+print("="*70)
+
+# ================================================================
+# Load invoice data
+# ================================================================
+print("\n" + "="*70)
+print("LOADING INVOICE DATA")
+print("="*70)
+
+ats_grouped = pd.read_csv('ats_grouped_transformed_with_discounts.csv')
+invoice_grouped = pd.read_csv('invoice_grouped_transformed_with_discounts.csv')
+
+ats_grouped['customer_type'] = 'ATS'
+invoice_grouped['customer_type'] = 'Invoice'
+combined_df = pd.concat([ats_grouped, invoice_grouped], ignore_index=True)
+
+print(f"Total invoices loaded: {len(combined_df):,}")
+
+# Filter out negative prices
+combined_df = combined_df[combined_df['total_undiscounted_price'] >= 0].copy()
+print(f"After filtering negatives: {len(combined_df):,}")
+
+# ================================================================
+# Parse and filter dates
+# ================================================================
+def parse_invoice_period(series: pd.Series) -> pd.Series:
+    """Robustly parse invoice_period"""
+    s = series.copy()
+    s_str = s.astype(str).str.strip()
+    s_str = s_str.replace({"nan": np.nan, "NaN": np.nan, "None": np.nan, "": np.nan})
+    
+    mask_yyyymm = s_str.str.fullmatch(r"\d{6}", na=False)
+    out = pd.Series(pd.NaT, index=s.index)
+    
+    if mask_yyyymm.any():
+        out.loc[mask_yyyymm] = pd.to_datetime(s_str.loc[mask_yyyymm], format="%Y%m", errors="coerce")
+    
+    mask_other = ~mask_yyyymm
+    if mask_other.any():
+        out.loc[mask_other] = pd.to_datetime(s_str.loc[mask_other], errors="coerce")
+    
+    return out
+
+combined_df['invoice_period'] = parse_invoice_period(combined_df['invoice_period'])
+combined_df = combined_df[combined_df['invoice_period'].notna()].copy()
+
+# Filter to FY2025
+fy2025_df = combined_df[
+    (combined_df['invoice_period'] >= FY2025_START) & 
+    (combined_df['invoice_period'] <= FY2025_END)
+].copy()
+
+print(f"\nFY2025 ({FY2025_START.strftime('%d/%m/%Y')} - {FY2025_END.strftime('%d/%m/%Y')}): {len(fy2025_df):,} invoices")
+
+if len(fy2025_df) == 0:
+    print("\n⚠ WARNING: No invoices found in FY2025!")
+    exit()
+
+# ================================================================
+# Load calibrated profiles
+# ================================================================
+print("\n" + "="*70)
+print("LOADING CALIBRATED PROFILES")
+print("="*70)
+
+profiles = {}
+
+# Try to load MULTIPLIER profile
+try:
+    multiplier_path = 'FY2025_outputs_calibrated_MULTIPLIER/decile_payment_profile_CALIBRATED_MULTIPLIER.pkl'
+    with open(multiplier_path, 'rb') as f:
+        profiles['MULTIPLIER'] = pickle.load(f)
+    print(f"✓ Loaded MULTIPLIER profile")
+    print(f"  Multiplier: {profiles['MULTIPLIER']['metadata']['multiplier']:.4f}x")
+except FileNotFoundError:
+    print(f"⚠ MULTIPLIER profile not found at: {multiplier_path}")
+    print(f"  Run 10.1_Uniform_multiplier_Scale_late_rates.py first")
+
+# Try to load UNIFORM profile
+try:
+    uniform_path = 'FY2025_outputs_calibrated_UNIFORM/decile_payment_profile_CALIBRATED_UNIFORM.pkl'
+    with open(uniform_path, 'rb') as f:
+        profiles['UNIFORM'] = pickle.load(f)
+    print(f"✓ Loaded UNIFORM profile")
+    print(f"  Uniform late rate: {profiles['UNIFORM']['metadata']['uniform_late_rate']*100:.2f}%")
+except FileNotFoundError:
+    print(f"⚠ UNIFORM profile not found at: {uniform_path}")
+    print(f"  Run 10.1_Assume_uniform_late_rate_calibration.py first")
+
+if not profiles:
+    print("\n✗ ERROR: No calibrated profiles found!")
+    print("Please run at least one of the calibration scripts first.")
+    exit()
+
+# ================================================================
+# Map invoices to deciles
+# ================================================================
+print("\n" + "="*70)
+print("MAPPING INVOICES TO DECILES")
+print("="*70)
+
+# Get n_deciles from first available profile
+n_deciles = list(profiles.values())[0]['metadata']['n_deciles']
+
+fy2025_df = fy2025_df.sort_values('total_undiscounted_price').reset_index(drop=True)
+
+fy2025_df['decile'] = pd.qcut(
+    fy2025_df['total_undiscounted_price'], 
+    q=n_deciles, 
+    labels=False,
+    duplicates='drop'
+)
+
+print(f"✓ Mapped {len(fy2025_df):,} invoices to {n_deciles} deciles")
+
+# ================================================================
+# Simulation functions
+# ================================================================
+def simulate_payment_behavior(invoices_df, decile_profile_dict, cd_to_days_map):
+    """Simulate which invoices are late and their payment timing"""
+    simulated = invoices_df.copy()
+    n_invoices = len(simulated)
+    
+    is_late_array = np.zeros(n_invoices, dtype=bool)
+    days_overdue_array = np.zeros(n_invoices, dtype=float)
+    cd_level_array = np.zeros(n_invoices, dtype=int)
+    
+    for idx, row in simulated.iterrows():
+        decile_num = row['decile']
+        decile_key = f'decile_{int(decile_num)}'
+        
+        if decile_key not in decile_profile_dict['deciles']:
+            decile_key = 'decile_0'
+        
+        decile_data = decile_profile_dict['deciles'][decile_key]
+        
+        # Determine if late
+        prob_late = decile_data['payment_behavior']['prob_late']
+        is_late = np.random.random() < prob_late
+        is_late_array[idx] = is_late
+        
+        if is_late:
+            # Sample cd level
+            cd_given_late = decile_data['delinquency_distribution']['cd_given_late']
+            
+            if cd_given_late:
+                cd_levels = list(cd_given_late.keys())
+                cd_probs = list(cd_given_late.values())
+                cd_probs = np.array(cd_probs) / np.array(cd_probs).sum()
+                
+                cd_level = np.random.choice(cd_levels, p=cd_probs)
+                cd_level_array[idx] = cd_level
+                
+                if cd_level in cd_to_days_map:
+                    days_overdue = cd_to_days_map[cd_level]
+                else:
+                    days_overdue = 90
+                
+                days_overdue_array[idx] = days_overdue
+            else:
+                cd_level_array[idx] = 0
+                days_overdue_array[idx] = 60
+        else:
+            days_overdue_array[idx] = 0
+            cd_level_array[idx] = 0
+    
+    simulated['is_late'] = is_late_array
+    simulated['days_overdue'] = days_overdue_array
+    simulated['months_overdue'] = days_overdue_array / 30
+    simulated['cd_level'] = cd_level_array
+    
+    simulated['due_date'] = simulated['invoice_period']
+    simulated['payment_date'] = simulated['due_date'] + pd.to_timedelta(simulated['days_overdue'], unit='D')
+    
+    return simulated
+
+def apply_discount_scenario(simulated_invoices, discount_scenario):
+    """
+    Apply discount scenario to invoices with pre-determined payment behavior
+    
+    MODIFICATION: For NO DISCOUNT scenario, late invoices retain their discount amount
+    """
+    result = simulated_invoices.copy()
+    
+    if discount_scenario == 'with_discount':
+        # WITH DISCOUNT: On-time invoices get discount, late invoices pay full price
+        result['principal_amount'] = result['total_discounted_price']
+        result['paid_on_time'] = ~result['is_late']
+        result['discount_applied'] = result['discount_amount']
+        
+        # Calculate interest on discounted amount (for late invoices)
+        daily_rate = ANNUAL_INTEREST_RATE / 365
+        result['interest_charged'] = (
+            result['principal_amount'] * 
+            daily_rate * 
+            result['days_overdue']
+        )
+        
+        # Revenue is just interest (discounts already given to on-time payers)
+        result['retained_discounts'] = 0  # No retained discounts in this scenario
+        result['credit_card_revenue'] = result['interest_charged']
+        
+    else:  # no_discount
+        # NO DISCOUNT: No one gets discount, late invoices pay full price + interest
+        result['principal_amount'] = result['total_undiscounted_price']
+        result['paid_on_time'] = ~result['is_late']
+        result['discount_applied'] = 0
+        
+        # Calculate interest on undiscounted amount
+        daily_rate = ANNUAL_INTEREST_RATE / 365
+        result['interest_charged'] = (
+            result['principal_amount'] * 
+            daily_rate * 
+            result['days_overdue']
+        )
+        
+        # MODIFICATION: Late invoices don't get discount, so we retain that money
+        result['retained_discounts'] = np.where(
+            result['is_late'],
+            result['discount_amount'],  # Retain discount for late invoices
+            0  # On-time invoices would have gotten discount (but there is none)
+        )
+        
+        # Revenue = interest + retained discounts
+        result['credit_card_revenue'] = result['interest_charged'] + result['retained_discounts']
+    
+    result['total_invoice_amount_discounted'] = result['total_discounted_price']
+    result['total_invoice_amount_undiscounted'] = result['total_undiscounted_price']
+    
+    return result
+
+# ================================================================
+# Run simulations for each calibrated profile
+# ================================================================
+print("\n" + "="*70)
+print("RUNNING SIMULATIONS WITH CALIBRATED PROFILES")
+print("="*70)
+
+results = {}
+
+for profile_name, profile_dict in profiles.items():
+    print(f"\n{profile_name} Profile:")
+    print("-" * 70)
+    
+    # Reset random seed for consistency
+    np.random.seed(RANDOM_SEED)
+    
+    # Simulate payment behavior ONCE
+    simulated_base = simulate_payment_behavior(fy2025_df, profile_dict, CD_TO_DAYS)
+    
+    # Apply both discount scenarios
+    with_discount = apply_discount_scenario(simulated_base, 'with_discount')
+    no_discount = apply_discount_scenario(simulated_base, 'no_discount')
+    
+    # Calculate metrics
+    n_late = simulated_base['is_late'].sum()
+    late_rate = n_late / len(simulated_base) * 100
+    
+    # Revenue breakdown
+    revenue_with_interest = with_discount['interest_charged'].sum()
+    revenue_with_retained = with_discount['retained_discounts'].sum()
+    revenue_with_total = with_discount['credit_card_revenue'].sum()
+    
+    revenue_no_interest = no_discount['interest_charged'].sum()
+    revenue_no_retained = no_discount['retained_discounts'].sum()
+    revenue_no_total = no_discount['credit_card_revenue'].sum()
+    
+    print(f"  Late invoices: {n_late:,} ({late_rate:.1f}%)")
+    print(f"\n  WITH DISCOUNT Revenue:")
+    print(f"    Interest: ${revenue_with_interest:,.2f}")
+    print(f"    Retained discounts: ${revenue_with_retained:,.2f}")
+    print(f"    TOTAL: ${revenue_with_total:,.2f}")
+    print(f"\n  NO DISCOUNT Revenue:")
+    print(f"    Interest: ${revenue_no_interest:,.2f}")
+    print(f"    Retained discounts: ${revenue_no_retained:,.2f}")
+    print(f"    TOTAL: ${revenue_no_total:,.2f}")
+    print(f"\n  Revenue difference: ${revenue_no_total - revenue_with_total:,.2f}")
+    
+    # Store results
+    results[profile_name] = {
+        'profile': profile_dict,
+        'simulated_base': simulated_base,
+        'with_discount': with_discount,
+        'no_discount': no_discount,
+        'late_rate': late_rate,
+        'revenue_with_interest': revenue_with_interest,
+        'revenue_with_retained': revenue_with_retained,
+        'revenue_with_total': revenue_with_total,
+        'revenue_no_interest': revenue_no_interest,
+        'revenue_no_retained': revenue_no_retained,
+        'revenue_no_total': revenue_no_total
+    }
+
+# ================================================================
+# Summary comparison
+# ================================================================
+print("\n" + "="*70)
+print("COMPARISON SUMMARY")
+print("="*70)
+
+comparison_data = []
+for profile_name, result_dict in results.items():
+    comparison_data.append({
+        'Method': profile_name,
+        'Late_Rate_Pct': result_dict['late_rate'],
+        'With_Interest': result_dict['revenue_with_interest'],
+        'With_Retained': result_dict['revenue_with_retained'],
+        'With_Total': result_dict['revenue_with_total'],
+        'No_Interest': result_dict['revenue_no_interest'],
+        'No_Retained': result_dict['revenue_no_retained'],
+        'No_Total': result_dict['revenue_no_total'],
+        'Difference': result_dict['revenue_no_total'] - result_dict['revenue_with_total']
+    })
+
+comparison_df = pd.DataFrame(comparison_data)
+print("\n", comparison_df.to_string(index=False))
+
+# ================================================================
+# Save results
+# ================================================================
+print("\n" + "="*70)
+print("SAVING RESULTS")
+print("="*70)
+
+# Save comparison summary
+comparison_csv = os.path.join(OUTPUT_DIR, 'calibrated_methods_comparison.csv')
+comparison_df.to_csv(comparison_csv, index=False)
+print(f"✓ Saved comparison: {comparison_csv}")
+
+# Save detailed results for each method
+for profile_name, result_dict in results.items():
+    excel_path = os.path.join(OUTPUT_DIR, f'FY2025_{profile_name}_detailed.xlsx')
+    with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+        result_dict['with_discount'].to_excel(writer, sheet_name='With_Discount', index=False)
+        result_dict['no_discount'].to_excel(writer, sheet_name='No_Discount', index=False)
+    print(f"✓ Saved {profile_name} details: {excel_path}")
+
+# ================================================================
+# Create comprehensive visualizations
+# ================================================================
+print("\n" + "="*70)
+print("CREATING VISUALIZATIONS")
+print("="*70)
+
+# ================================================================
+# Create comprehensive visualizations
+# ================================================================
+print("\n" + "="*70)
+print("CREATING VISUALIZATIONS")
+print("="*70)
+
+# ================================================================
+# Visualization 1: Revenue Comparison Bar Chart
+# ================================================================
+print("\nCreating visualization 1: Revenue comparison...")
+
+fig1, ax1 = plt.subplots(figsize=(14, 8))
+
+methods = list(results.keys())
+x = np.arange(len(methods))
+width = 0.35
+
+# For WITH DISCOUNT scenario
+with_interest = [results[m]['revenue_with_interest'] for m in methods]
+with_retained = [results[m]['revenue_with_retained'] for m in methods]
+
+# For NO DISCOUNT scenario
+no_interest = [results[m]['revenue_no_interest'] for m in methods]
+no_retained = [results[m]['revenue_no_retained'] for m in methods]
+
+# Stacked bars for WITH DISCOUNT
+bars1_bottom = ax1.bar(x - width/2, with_interest, width, label='With Discount - Interest', 
+                       color='#70AD47', alpha=0.8, edgecolor='black', linewidth=1.5)
+bars1_top = ax1.bar(x - width/2, with_retained, width, bottom=with_interest,
+                    label='With Discount - Retained Discounts', 
+                    color='#A9D18E', alpha=0.8, edgecolor='black', linewidth=1.5)
+
+# Stacked bars for NO DISCOUNT
+bars2_bottom = ax1.bar(x + width/2, no_interest, width, label='No Discount - Interest', 
+                       color='#4472C4', alpha=0.8, edgecolor='black', linewidth=1.5)
+bars2_top = ax1.bar(x + width/2, no_retained, width, bottom=no_interest,
+                    label='No Discount - Retained Discounts', 
+                    color='#8FAADC', alpha=0.8, edgecolor='black', linewidth=1.5)
+
+ax1.set_xlabel('Calibration Method', fontsize=14, fontweight='bold')
+ax1.set_ylabel('Revenue ($)', fontsize=14, fontweight='bold')
+ax1.set_title(f'FY2025 Revenue Estimates by Calibration Method\n(Interest + Retained Discounts)\n{FY2025_START.strftime("%d/%m/%Y")} - {FY2025_END.strftime("%d/%m/%Y")}', 
+              fontsize=16, fontweight='bold', pad=20)
+ax1.set_xticks(x)
+ax1.set_xticklabels(methods, fontsize=12)
+ax1.legend(fontsize=10, loc='upper left')
+ax1.grid(True, alpha=0.3, axis='y')
+ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+
+# Add total value labels
+for i, method in enumerate(methods):
+    total_with = results[method]['revenue_with_total']
+    total_no = results[method]['revenue_no_total']
+    
+    # With discount total
+    ax1.text(i - width/2, total_with, f'${total_with:,.0f}',
+            ha='center', va='bottom', fontsize=9, fontweight='bold')
+    
+    # No discount total
+    ax1.text(i + width/2, total_no, f'${total_no:,.0f}',
+            ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+plt.tight_layout()
+viz1_path = os.path.join(OUTPUT_DIR, '1_revenue_comparison_with_breakdown.png')
+plt.savefig(viz1_path, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {viz1_path}")
+plt.close()
+
+# ================================================================
+# Visualization 2: Late Payment Rates by Decile
+# ================================================================
+print("Creating visualization 2: Late rates by decile...")
+
+fig2, axes = plt.subplots(1, len(results), figsize=(8 * len(results), 6))
+if len(results) == 1:
+    axes = [axes]
+
+for idx, (profile_name, result_dict) in enumerate(results.items()):
+    ax = axes[idx]
+    
+    profile = result_dict['profile']
+    decile_nums = list(range(n_deciles))
+    late_rates = [profile['deciles'][f'decile_{i}']['payment_behavior']['prob_late']*100 
+                  for i in range(n_deciles)]
+    
+    bars = ax.bar(decile_nums, late_rates, color='#4472C4', alpha=0.7, edgecolor='black', linewidth=1)
+    
+    ax.set_xlabel('Decile', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Late Payment Rate (%)', fontsize=12, fontweight='bold')
+    ax.set_title(f'{profile_name} Method\nLate Rates by Decile', fontsize=14, fontweight='bold')
+    ax.set_xticks(decile_nums)
+    ax.set_xticklabels([f'D{i}' for i in decile_nums])
+    ax.grid(True, alpha=0.3, axis='y')
+    
+    # Add value labels
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height,
+                f'{height:.1f}%',
+                ha='center', va='bottom', fontsize=9)
+
+plt.tight_layout()
+viz2_path = os.path.join(OUTPUT_DIR, '2_late_rates_by_decile.png')
+plt.savefig(viz2_path, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {viz2_path}")
+plt.close()
+
+# ================================================================
+# Visualization 3: Cumulative Revenue Over Time (WITH TARGET LINE)
+# ================================================================
+print("Creating visualization 3: Cumulative revenue over time with target...")
+
+TARGET_REVENUE = 1_043_000  # $1.043M target from calibration
+
+fig3, axes = plt.subplots(len(results), 1, figsize=(16, 6 * len(results)))
+if len(results) == 1:
+    axes = [axes]
+
+for idx, (profile_name, result_dict) in enumerate(results.items()):
+    ax = axes[idx]
+    
+    # Aggregate by payment month for BOTH scenarios
+    with_discount_df = result_dict['with_discount']
+    no_discount_df = result_dict['no_discount']
+    
+    # WITH DISCOUNT - just interest
+    monthly_with = with_discount_df.groupby(with_discount_df['payment_date'].dt.to_period('M')).agg({
+        'credit_card_revenue': 'sum'
+    }).reset_index()
+    monthly_with['payment_date'] = monthly_with['payment_date'].dt.to_timestamp()
+    monthly_with['cumulative'] = monthly_with['credit_card_revenue'].cumsum()
+    
+    # NO DISCOUNT - interest + retained discounts
+    monthly_no = no_discount_df.groupby(no_discount_df['payment_date'].dt.to_period('M')).agg({
+        'interest_charged': 'sum',
+        'retained_discounts': 'sum',
+        'credit_card_revenue': 'sum'
+    }).reset_index()
+    monthly_no['payment_date'] = monthly_no['payment_date'].dt.to_timestamp()
+    monthly_no['cumulative_interest'] = monthly_no['interest_charged'].cumsum()
+    monthly_no['cumulative_retained'] = monthly_no['retained_discounts'].cumsum()
+    monthly_no['cumulative_total'] = monthly_no['credit_card_revenue'].cumsum()
+    
+    # Plot WITH DISCOUNT (simple line)
+    ax.plot(monthly_with['payment_date'], monthly_with['cumulative'], 
+            marker='o', linewidth=3, label='With Discount (Interest Only)', 
+            color='#70AD47', markersize=8)
+    
+    # Plot NO DISCOUNT as stacked area to show components
+    ax.fill_between(monthly_no['payment_date'], 0, monthly_no['cumulative_interest'],
+                     alpha=0.3, color='#4472C4', label='No Discount - Interest')
+    ax.fill_between(monthly_no['payment_date'], monthly_no['cumulative_interest'], 
+                     monthly_no['cumulative_total'],
+                     alpha=0.3, color='#8FAADC', label='No Discount - Retained Discounts')
+    
+    # Plot NO DISCOUNT total line
+    ax.plot(monthly_no['payment_date'], monthly_no['cumulative_total'], 
+            marker='s', linewidth=3, label='No Discount (Total)', 
+            color='#4472C4', markersize=8)
+    
+    # Add TARGET LINE at $1.043M
+    ax.axhline(y=TARGET_REVENUE, color='red', linestyle='--', linewidth=2.5, 
+               label=f'Target Revenue (${TARGET_REVENUE:,.0f})', alpha=0.8)
+    
+    # Find when NO DISCOUNT scenario crosses target
+    cross_idx = None
+    for i, val in enumerate(monthly_no['cumulative_total']):
+        if val >= TARGET_REVENUE:
+            cross_idx = i
+            break
+    
+    if cross_idx is not None:
+        cross_date = monthly_no['payment_date'].iloc[cross_idx]
+        cross_value = monthly_no['cumulative_total'].iloc[cross_idx]
+        
+        # Add vertical line at crossing point
+        ax.axvline(x=cross_date, color='red', linestyle=':', linewidth=2, alpha=0.5)
+        
+        # Add annotation
+        ax.annotate(f'Target reached:\n{cross_date.strftime("%Y-%m")}\n(${cross_value:,.0f})',
+                   xy=(cross_date, TARGET_REVENUE),
+                   xytext=(20, 30), textcoords='offset points',
+                   fontsize=10, fontweight='bold', color='red',
+                   bbox=dict(boxstyle='round,pad=0.5', facecolor='yellow', edgecolor='red', linewidth=2),
+                   arrowprops=dict(arrowstyle='->', color='red', linewidth=2))
+    
+    ax.set_title(f'{profile_name} Method - Cumulative Revenue Over Time\nComparing Interest vs Interest + Retained Discounts', 
+                 fontsize=14, fontweight='bold')
+    ax.set_xlabel('Payment Month', fontsize=12)
+    ax.set_ylabel('Cumulative Revenue ($)', fontsize=12)
+    ax.legend(loc='upper left', fontsize=11)
+    ax.grid(True, alpha=0.3)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    ax.tick_params(axis='x', rotation=45)
+    
+    # Add final values
+    final_with = monthly_with['cumulative'].iloc[-1]
+    final_no = monthly_no['cumulative_total'].iloc[-1]
+    final_interest = monthly_no['cumulative_interest'].iloc[-1]
+    final_retained = monthly_no['cumulative_retained'].iloc[-1]
+    
+    ax.annotate(f'With Discount\n${final_with:,.0f}', 
+                xy=(monthly_with['payment_date'].iloc[-1], final_with),
+                xytext=(10, -30), textcoords='offset points',
+                fontsize=10, fontweight='bold', color='#70AD47',
+                bbox=dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor='#70AD47', linewidth=2))
+    
+    ax.annotate(f'No Discount Total\n${final_no:,.0f}\n(Int: ${final_interest:,.0f}\n+Ret: ${final_retained:,.0f})', 
+                xy=(monthly_no['payment_date'].iloc[-1], final_no),
+                xytext=(10, 10), textcoords='offset points',
+                fontsize=10, fontweight='bold', color='#4472C4',
+                bbox=dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor='#4472C4', linewidth=2))
+
+plt.tight_layout()
+viz3_path = os.path.join(OUTPUT_DIR, '3_cumulative_revenue_over_time_with_target.png')
+plt.savefig(viz3_path, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {viz3_path}")
+plt.close()
+
+# ================================================================
+# Visualization 4: Revenue by Decile
+# ================================================================
+print("Creating visualization 4: Revenue by decile...")
+
+fig4, axes = plt.subplots(1, len(results), figsize=(8 * len(results), 6))
+if len(results) == 1:
+    axes = [axes]
+
+for idx, (profile_name, result_dict) in enumerate(results.items()):
+    ax = axes[idx]
+    
+    with_discount_df = result_dict['with_discount']
+    no_discount_df = result_dict['no_discount']
+    
+    decile_revenue_with = with_discount_df.groupby('decile')['credit_card_revenue'].sum()
+    
+    # For NO DISCOUNT, show interest and retained discounts separately
+    decile_no_grouped = no_discount_df.groupby('decile').agg({
+        'interest_charged': 'sum',
+        'retained_discounts': 'sum'
+    })
+    
+    x_pos = np.arange(len(decile_revenue_with))
+    width = 0.35
+    
+    # WITH DISCOUNT (simple bar)
+    ax.bar(x_pos - width/2, decile_revenue_with, width, 
+           label='With Discount', color='#70AD47', alpha=0.7, edgecolor='black')
+    
+    # NO DISCOUNT (stacked bar - interest + retained)
+    ax.bar(x_pos + width/2, decile_no_grouped['interest_charged'], width, 
+           label='No Discount - Interest', color='#4472C4', alpha=0.7, edgecolor='black')
+    ax.bar(x_pos + width/2, decile_no_grouped['retained_discounts'], width,
+           bottom=decile_no_grouped['interest_charged'],
+           label='No Discount - Retained Disc.', color='#8FAADC', alpha=0.7, edgecolor='black')
+    
+    ax.set_xlabel('Decile', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Total Revenue ($)', fontsize=12, fontweight='bold')
+    ax.set_title(f'{profile_name} Method\nRevenue by Decile', fontsize=14, fontweight='bold')
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels([f'D{i}' for i in decile_revenue_with.index])
+    ax.legend(loc='upper left', fontsize=11)
+    ax.grid(True, alpha=0.3, axis='y')
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+
+plt.tight_layout()
+viz4_path = os.path.join(OUTPUT_DIR, '4_revenue_by_decile.png')
+plt.savefig(viz4_path, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {viz4_path}")
+plt.close()
+# ================================================================
+# Final summary
+# ================================================================
+print("\n" + "="*70)
+print("FINAL REVENUE ESTIMATES - FY2025 (WITH RETAINED DISCOUNTS)")
+print("="*70)
+
+for profile_name, result_dict in results.items():
+    print(f"\n{profile_name} Method:")
+    print(f"  WITH DISCOUNT:")
+    print(f"    Interest:          ${result_dict['revenue_with_interest']:>15,.2f}")
+    print(f"    Retained Disc.:    ${result_dict['revenue_with_retained']:>15,.2f}")
+    print(f"    TOTAL:             ${result_dict['revenue_with_total']:>15,.2f}")
+    print(f"\n  NO DISCOUNT:")
+    print(f"    Interest:          ${result_dict['revenue_no_interest']:>15,.2f}")
+    print(f"    Retained Disc.:    ${result_dict['revenue_no_retained']:>15,.2f}")
+    print(f"    TOTAL:             ${result_dict['revenue_no_total']:>15,.2f}")
+    print(f"\n  Difference:          ${result_dict['revenue_no_total'] - result_dict['revenue_with_total']:>15,.2f}")
+    print(f"  Late Rate:           {result_dict['late_rate']:>15.1f}%")
+
+print("\n" + "="*70)
+print("ALL ANALYSIS COMPLETE")
+print("="*70)
+print(f"\nFiles saved to: {OUTPUT_DIR}/")
+print("  1. calibrated_methods_comparison.csv - Summary comparison")
+print("  2. FY2025_[METHOD]_detailed.xlsx - Detailed simulations (each method)")
+print("  3. 1_revenue_comparison_with_breakdown.png - Revenue bar chart with components")
+print("  4. 2_revenue_component_breakdown.png - Component breakdown by scenario")
+print("  5. 3_cumulative_revenue_with_components.png - Cumulative revenue over time")
+print("  6. 4_late_rates_by_decile.png - Late rates by decile")
+print("\nKEY DIFFERENCE FROM 10.2:")
+print("  - NO DISCOUNT revenue now includes RETAINED DISCOUNTS for late invoices")
+print("  - Late invoices don't get discount, so that amount becomes additional revenue")
+print("  - Revenue = Interest + Retained Discounts (not just interest)")
+print("="*70)
