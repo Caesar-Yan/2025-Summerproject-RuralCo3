@@ -1,3 +1,21 @@
+'''
+Docstring for 08_group_by_invoice
+
+this script is simply grouping all lines with same invoice_id and combining the discounted and undiscounted prices.
+the reasoning is that the line items all belong to am invoice, and one account holder pays each invoice.
+
+inputs:
+- datetime_parsed_ats_invoice_line_item_df.csv
+- datetime_parsed_invoice_line_item_df.csv
+
+outputs:
+- ats_grouped_by_invoice.csv
+- invoice_grouped_by_invoice.csv
+
+'''
+
+
+
 import pandas as pd
 import numpy as np
 import pickle
@@ -5,8 +23,8 @@ import pickle
 # ================================================================
 # Load the two imputed line-item datasets
 # ================================================================
-ats_path = "datetime_parsed_ats_invoice_line_item_df_transformed.csv"
-invoice_path = "datetime_parsed_invoice_line_item_df_transformed.csv"
+ats_path = "datetime_parsed_ats_invoice_line_item_df.csv"
+invoice_path = "datetime_parsed_invoice_line_item_df.csv"
 
 ats = pd.read_csv(ats_path)
 invoice = pd.read_csv(invoice_path)
@@ -54,6 +72,6 @@ print("\nInvoice Sample:")
 print(invoice_grouped.head())
 
 # Optional: Save the grouped data
-ats_grouped.to_csv('ats_grouped_by_invoice_transformed.csv', index=False)
-invoice_grouped.to_csv('invoice_grouped_by_invoice_transformed.csv', index=False)
-print("\nSaved grouped_transformed datasets to CSV files")
+ats_grouped.to_csv('ats_grouped_by_invoice.csv', index=False)
+invoice_grouped.to_csv('invoice_grouped_by_invoice.csv', index=False)
+print("\nSaved grouped datasets to CSV files")

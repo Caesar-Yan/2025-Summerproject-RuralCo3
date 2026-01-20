@@ -1,3 +1,22 @@
+'''
+Docstring for 03_infer_values_ATS_line_item
+
+this script is mapping the relationships between volumn variables in the raw data to construct 
+undiscounted and discounted prices per invoice line item.
+we are using line_item data as opposed to invoice data because they contain the same data, 
+but line_item data is more condensed
+
+inputs:
+ats_invoice_line_item_df - from pickled dataframe
+
+outputs:
+- imputed_ats_invoice_line_item.csv 
+    - copy of ats_invoice_line_item_df but has three new columns (discounted_price, undiscounted_price, flags)
+    - flags column just tracks how discounted_price and undiscoutned_price relationship was mapped for troubleshooting
+
+'''
+
+
 import json
 import re
 from pathlib import Path
@@ -5,16 +24,22 @@ import pandas as pd
 import numpy as np
 import pickle
 
-# Load the data
-with open('all_data.pkl', 'rb') as f:
-    all_data = pickle.load(f)
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
 
-# with open('analyze_dataframe.pkl', 'rb') as f:
-#     analyze_dataframe = pickle.load(f)
+# Output directory for processed data
+output_dir = base_dir / "data_cleaning"
+output_dir.mkdir(exist_ok=True)  # Create directory if it doesn't exist
+
+# Load pickled data
+with open(base_dir / "all_data.pkl", 'rb') as f:
+    all_data = pickle.load(f)
 
 ats_invoice_line_item_df = all_data.get('ats_invoice_line_item')
 
 imputed_ats_invoice_line_item_df = ats_invoice_line_item_df
+
+
 
 def get_non_null_percentage(df, column_name):
     """
@@ -169,9 +194,9 @@ def analyze_dataframe(df, df_name='dataframe', output_filename='missing_values_s
         results.append(row_data)
     
     results_df = pd.DataFrame(results)
-    results_df.to_csv(output_filename, index=False, mode='w')
+    results_df.to_csv(output_dir / output_filename, index=False, mode='w')
     
-    print(f"Saved to {output_filename}")
+    print(f"Saved to {output_dir / output_filename}")
     
     return results_df
 
@@ -184,7 +209,7 @@ invoice_functions = {
 }
 
 # Save all functions to a single pickle file
-with open('invoice_functions.pkl', 'wb') as f:
+with open(output_dir / 'invoice_functions.pkl', 'wb') as f:
     pickle.dump(invoice_functions, f)
 
 # ============================================================================================================
@@ -222,9 +247,9 @@ anomaly_mask = ~mask_null & (
     imputed_ats_invoice_line_item_df['unit_gross_amt_derived']
 )
 
-# Save anomalies to CSV ofr inspection
+# Save anomalies to CSV for inspection
 anomalies_df = imputed_ats_invoice_line_item_df[anomaly_mask]
-anomalies_df.to_csv('testing.csv', index=False, mode='w')
+anomalies_df.to_csv(output_dir / 'testing.csv', index=False, mode='w')
 
 print(f"Number of anomalies: {anomaly_mask.sum()}")
 # unit_gross_amt_derived cannot be calculated because of missing line_gross_amt_received, or imp_ value is negligibly different
@@ -254,7 +279,7 @@ else:
     print(f"⚠ Warning: {remaining_nulls} null values still remain")
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 # ============================================================================================================
 # EXTRACT NON-EMPTY EXTRAS ROWS
@@ -270,8 +295,8 @@ extras_mask = (
 extras_df = imputed_ats_invoice_line_item_df[extras_mask]
 
 # Delete the file if it exists and create new
-Path('testing.csv').unlink(missing_ok=True)
-extras_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+extras_df.to_csv(output_dir / 'testing.csv', index=False)
 
 print(f"Number of rows with non-empty extras: {extras_mask.sum()}")
 # 28094 rows total with non-null extras column
@@ -296,8 +321,8 @@ original_price_df = extras_df[original_price_mask]
 original_price_df['flag'] = 'original_price'
 
 # Save to CSV
-Path('testing.csv').unlink(missing_ok=True)
-original_price_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+original_price_df.to_csv(output_dir / 'testing.csv', index=False)
 
 print(f"Number of rows with 'original_price' in extras: {original_price_mask.sum()}")
 # 4487/28094 non-empty extras rows
@@ -313,8 +338,8 @@ original_price_df['discounted_price'] = original_price_df['imp_original_price'] 
 original_price_df = check_diff(original_price_df, 'discounted_price', 'line_net_amt_received', 'discounted_price_check')
 # all values equal
 
-Path('testing.csv').unlink(missing_ok=True)
-original_price_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+original_price_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Create a boolean column to check if the equality holds
 # .round(2) to account for float issues
@@ -332,8 +357,8 @@ print(f"Percentage matching: {original_price_df['price_check'].sum() / len(origi
 mismatches_df = original_price_df[original_price_df['price_check'] == False]
 
 # Save to CSV
-Path('testing.csv').unlink(missing_ok=True)
-mismatches_df.to_csv('testing.csv', index=False, mode='w')
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+mismatches_df.to_csv(output_dir / 'testing.csv', index=False, mode='w')
 
 print(f"Saved {len(mismatches_df)} rows with price_check = False to testing.csv")
 # Have ensured fidelity of data in regards to discounts received by cardholder from gas stations
@@ -378,7 +403,7 @@ print(get_non_null_percentage(imputed_ats_invoice_line_item_df, 'flag'))
 # 4,487 rows or 1.18%
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 # ============================================================================================================
 # EXTRACT AND VALIDATE BULK_RATE AND NEW_UNIT_PRICE FROM EXTRAS
@@ -396,9 +421,9 @@ bulk_rate_mask = (
 # Apply the mask and create a copy
 bulk_rate_df = extras_df[bulk_rate_mask].copy()
 # Save as CSV
-bulk_rate_df.to_csv('temp_csvs/bulk_rate_data.csv', index=False)
+bulk_rate_df.to_csv(output_dir / 'bulk_rate_data.csv', index=False)
 # Read back
-bulk_rate_df = pd.read_csv('temp_csvs/bulk_rate_data.csv')
+bulk_rate_df = pd.read_csv(output_dir / 'bulk_rate_data.csv')
 
 # Check if every row in bulk_rate_df['extras'] contains 'new_unit_price'
 contains_new_unit_price = bulk_rate_df['extras'].str.contains('new_unit_price', na=False)
@@ -409,8 +434,8 @@ all_contain
 # TRUE
 
 # Save to CSV
-Path('testing.csv').unlink(missing_ok=True)
-bulk_rate_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+bulk_rate_df.to_csv(output_dir / 'testing.csv', index=False)
 
 print(f"Number of rows with 'bulk_rate' in extras: {len(bulk_rate_df)}")
 # 12283/28094 rows with non-empty extras column
@@ -435,8 +460,8 @@ print(f"Nulls in imp_new_unit_price: {bulk_rate_df['imp_new_unit_price'].isna().
 bulk_rate_df['imp_bulk_rate'] = bulk_rate_df['imp_bulk_rate'].fillna(0)
 print(f"Nulls in imp_bulk_rate: {bulk_rate_df['imp_bulk_rate'].isna().sum()}")
 
-Path('testing.csv').unlink(missing_ok=True)
-bulk_rate_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+bulk_rate_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Check if values are equal within tolerance
 bulk_rate_df['price_check'] = np.isclose(
@@ -446,8 +471,8 @@ bulk_rate_df['price_check'] = np.isclose(
     atol=1e-4  # tolerance of 0.0001 (4 decimal places)
 )
 
-Path('testing.csv').unlink(missing_ok=True)
-bulk_rate_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+bulk_rate_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # See how many rows match
 print(f"Number of rows where imp_original_price = line_net_amt_received + discount_offered: {bulk_rate_df['price_check'].sum()}")
@@ -479,8 +504,8 @@ bulk_rate_df['discounted_price'] = ((bulk_rate_df['quantity'] * bulk_rate_df['un
 # Add flag column
 bulk_rate_df['flag'] = 'bulk_rate'
 
-Path('testing.csv').unlink(missing_ok=True)
-bulk_rate_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+bulk_rate_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # ADD BULK_RATE COLUMN TO MAIN DATAFRAME
@@ -517,7 +542,7 @@ print(get_non_null_percentage(imputed_ats_invoice_line_item_df, 'flag'))
 # 16,770 rows or 4.41% done so far
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 # ============================================================================================================
 # IDENTIFY LEFTOVER EXTRAS ROWS
@@ -534,9 +559,9 @@ leftover_extras_mask = (
 # Apply the mask and create a copy
 leftovers_df = extras_df[leftover_extras_mask].copy()
 # Save as CSV
-leftovers_df.to_csv('temp_csvs/leftover_extras_data.csv', index=False)
+leftovers_df.to_csv(output_dir / 'leftover_extras_data.csv', index=False)
 # Read back
-leftovers_df = pd.read_csv('temp_csvs/leftover_extras_data.csv')
+leftovers_df = pd.read_csv(output_dir / 'leftover_extras_data.csv')
 
 # ============================================================================================================
 # EXTRACT AND VALIDATE YOURRATE FROM EXTRAS
@@ -554,9 +579,9 @@ yourRate_mask = (
 # Apply the mask and create a copy
 yourRate_df = extras_df[yourRate_mask].copy()
 # Save as CSV
-yourRate_df.to_csv('temp_csvs/yourRate_data.csv', index=False)
+yourRate_df.to_csv(output_dir / 'yourRate_data.csv', index=False)
 # Read back
-yourRate_df = pd.read_csv('temp_csvs/yourRate_data.csv')
+yourRate_df = pd.read_csv(output_dir / 'yourRate_data.csv')
 
 print(f"Number of rows with 'yourRate' in extras: {len(yourRate_df)}")
 # 12283/28094 rows with bulk_rate and new_unit_price
@@ -569,8 +594,8 @@ yourRate_df.loc[:, 'imp_yourRate'] = yourRate_df['extras'].str.extract(
     r"'yourRate'\s*:\s*'(\d+\.?\d*)'"
 ).astype(float)
 
-Path('testing.csv').unlink(missing_ok=True)
-yourRate_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+yourRate_df.to_csv(output_dir / 'testing.csv', index=False)
 
 yourRate_df['imp_line_net_amt_received'] = yourRate_df['imp_yourRate'] * yourRate_df['quantity']
 yourRate_df['imp_line_net_amt_received'] = yourRate_df['imp_line_net_amt_received'].round(2)
@@ -582,8 +607,8 @@ yourRate_df['is_equal'] = yourRate_df['line_net_amt_received'] == yourRate_df['i
 print(yourRate_df['is_equal'].value_counts())
 # 1 FALSE, because of negative value for quantity, yourRate, etc.
 
-Path('testing.csv').unlink(missing_ok=True)
-yourRate_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+yourRate_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Add discounted_price column
 yourRate_df['discounted_price'] = (yourRate_df['quantity'] * yourRate_df['imp_yourRate']).round(2)
@@ -600,8 +625,8 @@ yourRate_df['flag'] = 'your_rate'
 
 print(len(yourRate_df))
 
-Path('testing.csv').unlink(missing_ok=True)
-yourRate_df.to_csv('testing.csv', index=False)
+(output_dir / 'testing.csv').unlink(missing_ok=True)
+yourRate_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # ADD YOUR_RATE COLUMN TO MAIN DATAFRAME
@@ -638,7 +663,7 @@ print(get_non_null_percentage(imputed_ats_invoice_line_item_df, 'flag'))
 # 28,081 rows or 7.39% done so far
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 # ============================================================================================================
 # FIND ALL DISCOUNT_OFFERED = 0
@@ -654,7 +679,7 @@ discount_zero_df = imputed_ats_invoice_line_item_df[discount_zero_mask].copy()
 print(len(discount_zero_df))
 
 # Save to CSV
-discount_zero_df.to_csv('testing.csv', index=False)
+discount_zero_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Set the main delivery columns
 discount_zero_df['undiscounted_price'] = discount_zero_df['line_net_amt_received']
@@ -672,7 +697,7 @@ discount_zero_df.loc[
 print((discount_zero_df['flag'] == 'no_price').sum())
 
 # Save to CSV
-discount_zero_df.to_csv('testing.csv', index=False)
+discount_zero_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # ADD DISCOUNT_ZERO COLUMNS TO MAIN DATAFRAME
@@ -708,7 +733,7 @@ print(get_non_null_percentage(imputed_ats_invoice_line_item_df, 'flag'))
 # 43,531 rows or 11.45% done so far
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 # ============================================================================================================
 # FIND ALL DISCOUNT_OFFERED = LINE_GROSS_AMT_RECEIVED I.E. FREE
@@ -729,7 +754,7 @@ print(len(free_df))
 print(free_df['flag'].isnull().all())
 
 # Save to CSV
-free_df.to_csv('testing.csv', index=False)
+free_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Set the main delivery columns
 free_df['undiscounted_price'] = free_df['line_gross_amt_received']
@@ -737,7 +762,7 @@ free_df['discounted_price'] = 0
 free_df['flag'] = 'free_gift' 
 
 # Save to CSV
-free_df.to_csv('testing.csv', index=False)
+free_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # ADD FREE_GIFT COLUMNS TO MAIN DATAFRAME
@@ -751,7 +776,7 @@ merge_updates_to_main_df(
 # 43,649 rows or 11.48% done so far
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 no_flags_mask = (
     imputed_ats_invoice_line_item_df['flag'].isnull()
@@ -759,7 +784,7 @@ no_flags_mask = (
 
 no_flags_df = imputed_ats_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
-no_flags_df.to_csv('testing.csv', index=False)
+no_flags_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # FIND ALL UNIT_GROSS_AMT_RECEIVED = 0 I.E. price_0
@@ -772,7 +797,7 @@ price_zero_mask = (
 
 price_zero_df = imputed_ats_invoice_line_item_df[price_zero_mask].copy()
 # Save to CSV
-price_zero_df.to_csv('testing.csv', index=False)
+price_zero_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Set the main delivery columns
 price_zero_df['undiscounted_price'] = 0
@@ -780,7 +805,7 @@ price_zero_df['discounted_price'] = 0
 price_zero_df['flag'] = 'price_zero' 
 
 # Save to CSV
-price_zero_df.to_csv('testing.csv', index=False)
+price_zero_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # ADD FREE_GIFT COLUMNS TO MAIN DATAFRAME
@@ -794,7 +819,7 @@ merge_updates_to_main_df(
 # 48,267 rows or 12.69% done so far
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 no_flags_mask = (
     imputed_ats_invoice_line_item_df['flag'].isnull()
@@ -802,7 +827,7 @@ no_flags_mask = (
 
 no_flags_df = imputed_ats_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
-no_flags_df.to_csv('testing.csv', index=False)
+no_flags_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # FIND ALL DISCOUNT_OFFERED = NULL I.E. DISCOUNT_ASSUMED_ZERO
@@ -815,7 +840,7 @@ discount_null_mask = (
 
 discount_null_df = imputed_ats_invoice_line_item_df[discount_null_mask].copy()
 # Save to CSV
-discount_null_df.to_csv('testing.csv', index=False)
+discount_null_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Inspect dataframe
 results = analyze_dataframe(
@@ -830,7 +855,7 @@ discount_null_df['discounted_price'] = discount_null_df['undiscounted_price']
 discount_null_df['flag'] = 'discount_assumed_zero' 
 
 # Save to CSV
-discount_null_df.to_csv('testing.csv', index=False)
+discount_null_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # ADD DISCOUNT_ASSUMED_ZERO COLUMNS TO MAIN DATAFRAME
@@ -844,7 +869,7 @@ merge_updates_to_main_df(
 # 71,300 rows or 18.75% done so far
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 no_flags_mask = (
     imputed_ats_invoice_line_item_df['flag'].isnull()
@@ -852,7 +877,7 @@ no_flags_mask = (
 
 no_flags_df = imputed_ats_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
-no_flags_df.to_csv('no_flags_df.csv', index=False)
+no_flags_df.to_csv(output_dir / 'no_flags_df.csv', index=False)
 
 # ============================================================================================================
 # FIND ALL LINE_GROSS_AMT_RECEIVED = QUANTITY * UNIT_GROSS_AMT_RECEIVED + DISCOUNT 
@@ -876,7 +901,7 @@ print(f"All flags null: {discount_regular_df['flag'].isnull().all()}")
 print(f"Non-null flag count: {discount_regular_df['flag'].notnull().sum()}")
 
 # Save to CSV
-discount_regular_df.to_csv('testing.csv', index=False)
+discount_regular_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Set the main delivery columns
 discount_regular_df['undiscounted_price'] = discount_regular_df['line_gross_amt_received']
@@ -884,7 +909,7 @@ discount_regular_df['discounted_price'] = (discount_regular_df['undiscounted_pri
 discount_regular_df['flag'] = 'discount_regular' 
 
 # Save to CSV
-discount_regular_df.to_csv('testing2.csv', index=False)
+discount_regular_df.to_csv(output_dir / 'testing2.csv', index=False)
 
 # ============================================================================================================
 # ADD DISCOUNT_REGULAR COLUMNS TO MAIN DATAFRAME
@@ -898,7 +923,7 @@ merge_updates_to_main_df(
 # 351,689 rows or 83.03% done so far
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 no_flags_mask = (
     imputed_ats_invoice_line_item_df['flag'].isnull()
@@ -906,7 +931,7 @@ no_flags_mask = (
 
 no_flags_df = imputed_ats_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
-no_flags_df.to_csv('no_flags_df.csv', index=False)
+no_flags_df.to_csv(output_dir / 'no_flags_df.csv', index=False)
 
 # ============================================================================================================
 # FIND ALL LINE_GROSS_AMT_RECEIVED = QUANTITY * UNIT_GROSS_AMT_RECEIVED + DISCOUNT 
@@ -928,7 +953,7 @@ discount_regular_again_df['line_gross_amt_received'] = discount_regular_again_df
 discount_regular_again_df['diff'] = (discount_regular_again_df['line_gross_amt_received'] - discount_regular_again_df['check_sum']).round(2)
 
 # Save to CSV
-discount_regular_again_df.to_csv('testing.csv', index=False)
+discount_regular_again_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Filter for rows where diff == 0
 zero_diff_mask = discount_regular_again_df['diff'] == 0
@@ -940,7 +965,7 @@ discount_regular_again_df.loc[zero_diff_mask, 'discounted_price'] = (discount_re
 discount_regular_again_df.loc[zero_diff_mask, 'flag'] = 'discount_regular'
 
 # Save to CSV
-discount_regular_again_df.to_csv('testing.csv', index=False)
+discount_regular_again_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # ADD DISCOUNT_ASSUMED_ZERO COLUMNS TO MAIN DATAFRAME
@@ -954,7 +979,7 @@ merge_updates_to_main_df(
 # 379,799 rows or 99.98% done so far
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 no_flags_mask = (
     imputed_ats_invoice_line_item_df['flag'].isnull()
@@ -962,7 +987,7 @@ no_flags_mask = (
 
 no_flags_df = imputed_ats_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
-no_flags_df.to_csv('no_flags_df.csv', index=False)
+no_flags_df.to_csv(output_dir / 'no_flags_df.csv', index=False)
 
 # ============================================================================================================
 # FIND ALL LINE_NET_AMT_RECEIVED = LINE_GROSS_AMT_RECEIVED - DISCOUNT_OFFERED 
@@ -983,14 +1008,14 @@ discounted_df['check_equal'] = (discounted_df['line_net_amt_received'] ==
                                  )
 
 # Save to CSV
-discounted_df.to_csv('testing.csv', index=False)
+discounted_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # Rounding for numerical stability
 discounted_df['line_net_amt_received'] = discounted_df['line_net_amt_received'].round(2)
 discounted_df['diff'] = (discounted_df['line_net_amt_received'] - discounted_df['check_sum']).round(2)
 
 # Save to CSV
-discounted_df.to_csv('testing.csv', index=False)
+discounted_df.to_csv(output_dir / 'testing.csv', index=False)
 # All have zero difference to set flags for all to discounted
 
 # Set the main delivery columns only for rows where diff == 0
@@ -999,7 +1024,7 @@ discounted_df['discounted_price'] = discounted_df['line_net_amt_received']
 discounted_df['flag'] = 'discounted'
 
 # Save to CSV
-discounted_df.to_csv('testing.csv', index=False)
+discounted_df.to_csv(output_dir / 'testing.csv', index=False)
 
 # ============================================================================================================
 # ADD DISCOUNT_ASSUMED_ZERO COLUMNS TO MAIN DATAFRAME
@@ -1013,7 +1038,7 @@ merge_updates_to_main_df(
 # 380,213 rows or 100.00%!
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 
 no_flags_mask = (
     imputed_ats_invoice_line_item_df['flag'].isnull()
@@ -1021,13 +1046,10 @@ no_flags_mask = (
 
 no_flags_df = imputed_ats_invoice_line_item_df[no_flags_mask].copy()
 # Save to CSV
-no_flags_df.to_csv('no_flags_df.csv', index=False)
-
-
-
+no_flags_df.to_csv(output_dir / 'no_flags_df.csv', index=False)
 
 # Load your CSV
-df = pd.read_csv('imputed_ats_invoice_line_item.csv')
+df = pd.read_csv(output_dir / 'imputed_ats_invoice_line_item.csv')
 
 # See all unique values
 print(df['flag'].unique())

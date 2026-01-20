@@ -1,5 +1,17 @@
 """
 Docstring for 09.1_data_enginerring_transformed
+
+this script is taking the final cleaned dataframes and generates some statistics about the column variables
+
+
+
+
+
+
+ats_grouped.to_csv('ats_grouped_transformed_with_discounts.csv', index=False)
+invoice_grouped.to_csv('invoice_grouped_transformed_with_discounts.csv', index=False)
+results.to_csv('discount_analysis_results_transformed.csv', index=False)
+
 """
 
 import pandas as pd

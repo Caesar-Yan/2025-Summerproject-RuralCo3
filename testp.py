@@ -1,26 +1,3 @@
-'''
-Docstring for 05_dates_parser
-
-this script is generating 100% complete columns for transaction dates and the due date for each invoice
-due dates are set as 20th of the next month, and all transactions generated within each calendar month will
-be assigned to the next eligible due date.
-
-there are also some outputs about counts of data available for each invoice_period.
-these are at the bottom of the script, and allow us to make decisions to omit the first couple
-and last period due to incomplete information on the period.
-
-the outputted CSVs will have date_from_invoice and invoice_period columns added on.
-
-inputs:
-- imputed_ats_invoice_line_item.csv
-- imputed_invoice_line_item.csv
-
-outputs:
-- datetime_parsed_ats_invoice_line_item_df.csv
-- datetime_parsed_invoice_line_item_df.csv
-
-'''
-
 import json
 import re
 from pathlib import Path

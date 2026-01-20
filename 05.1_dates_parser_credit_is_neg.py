@@ -1,3 +1,21 @@
+'''
+Docstring for 05.1_dates_parser_credit_is_neg
+
+this script is simply standardising credit and negative values. 
+according to the column variable debit_credit_indicator, debits are to be positive, and credits are to be negative
+
+inputs:
+- datetime_parsed_ats_invoice_line_item_df.csv
+- datetime_parsed_invoice_line_item_df.csv
+
+outputs:
+- datetime_parsed_ats_invoice_line_item_df_transformed.csv
+- datetime_parsed_invoice_line_item_df_transformed.csv
+
+
+'''
+
+
 import pandas as pd
 import numpy as np
 from pathlib import Path

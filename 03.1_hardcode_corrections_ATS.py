@@ -1,8 +1,30 @@
+'''
+Docstring for 03.1_hardcode_corrections_ATS
+
+this script is hardcoding some corrections in the raw data.
+the corrections are made because the values are obviously recording errors, e.g. price is 10 million instaed of 10 thousand
+
+inputs:
+- imputed_ats_invoice_line_item.csv
+
+outputs:
+- imputed_ats_invoice_line_item.csv
+    overwrites same csv with updated figures
+
+'''
+
+
+
 import pandas as pd
 import numpy as np
+from pathlib import Path
+
+# Define base directories (matching your main script)
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+output_dir = base_dir / "data_cleaning"
 
 # Load the imputed dataframe
-imputed_ats_invoice_line_item_df = pd.read_csv('imputed_ats_invoice_line_item.csv')
+imputed_ats_invoice_line_item_df = pd.read_csv(output_dir / 'imputed_ats_invoice_line_item.csv')
 
 print(f"Original dataframe shape: {imputed_ats_invoice_line_item_df.shape}")
 
@@ -108,7 +130,7 @@ for unnamed_0_value in hardcoded_changes.keys():
         print(row_data.to_string(index=False))
 
 # Save to CSV
-imputed_ats_invoice_line_item_df.to_csv('imputed_ats_invoice_line_item.csv', index=False, mode='w')
+imputed_ats_invoice_line_item_df.to_csv(output_dir / 'imputed_ats_invoice_line_item.csv', index=False, mode='w')
 print(f"\n{'='*80}")
-print(f"Saved updated dataframe to imputed_ats_invoice_line_item.csv")
+print(f"Saved updated dataframe to {output_dir / 'imputed_ats_invoice_line_item.csv'}")
 print(f"Final dataframe shape: {imputed_ats_invoice_line_item_df.shape}")

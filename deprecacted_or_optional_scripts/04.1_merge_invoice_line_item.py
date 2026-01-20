@@ -1,9 +1,15 @@
 import pandas as pd
 import numpy as np
+from pathlib import Path
+
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+output_dir = base_dir / "data_cleaning"
+output_dir.mkdir(exist_ok=True)
 
 # load data
-df_invoice = pd.read_csv("invoice.csv", low_memory=False)
-df_line = pd.read_csv("invoice_line_item.csv", low_memory=False)
+df_invoice = pd.read_csv(output_dir / "invoice.csv", low_memory=False)
+df_line = pd.read_csv(output_dir / "invoice_line_item.csv", low_memory=False)
 
 print(df_line.columns.tolist())
 
@@ -66,8 +72,6 @@ df_merged["amount_diff"] = (
 df_merged["amount_diff"].describe()
 
 # Save merged file
-output_path = r"P:\RuralCoproject\invoice_merged_clean.csv"
+df_merged.to_csv(output_dir / "invoice_merged_clean.csv", index=False)
 
-df_merged.to_csv(output_path, index=False)
-
-print(f"Merged file saved to: {output_path}")
+print(f"Merged file saved to: {output_dir / 'invoice_merged_clean.csv'}")
