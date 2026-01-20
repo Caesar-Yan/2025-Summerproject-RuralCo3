@@ -1,42 +1,40 @@
-"""
-09.3_test.py
-===============================
-Create payment behavior profile based on InvoiceAmount deciles.
+'''
+Docstring for 09.3_Payment_profile_construction
 
-Strategy:
-1. Order accounts by InvoiceAmount
-2. Create 10 equal-sized deciles
-3. For each decile:
-   - P(late) = probability Late = 1
-   - P(cd = k | late) = distribution of delinquency levels given late
+constructs payment profile on an account level by stratifying accounts based on InvoiceAmount.
+uses real counts of account statuses to construct distributions based on how many of the strata 
+are delinquent, and how severe the delinquency is based on the cd level.
 
-This can be directly mapped to invoice data by invoice amount.
+inputs:
+- master_dataset_complete.csv
 
-Author: Chris
-Date: January 2026
-"""
+outputs:
+- decile_payment_profile_summary.csv
+- decile_assignments.csv
+- decile_payment_profile.pkl
+'''
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 from pathlib import Path
-
 import os
-
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(SCRIPT_DIR)
-print(f"Working directory set to: {os.getcwd()}")
 
 # ================================================================
 # Configuration
 # ================================================================
-INPUT_FILE = r"Payment Profile\master_dataset_complete.csv"
-OUTPUT_DIR = Path("Payment Profile")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+profile_dir = base_dir / "payment_profile"
+profile_dir.mkdir(exist_ok=True)
+data_cleaning_dir = base_dir / "data_cleaning"
+
+INPUT_FILE = profile_dir / "master_dataset_complete.csv"
+OUTPUT_DIR = profile_dir
 
 # Payment terms
+# This is because a bill is overdue after the 20th of the next month
 PAYMENT_TERMS_MONTHS = 20 / 30  # Convert 20 days to months (~0.67 months)
 
 # Number of deciles (10 = deciles, can change to 4 for quartiles, 5 for quintiles, etc.)

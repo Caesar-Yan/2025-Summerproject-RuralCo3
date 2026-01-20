@@ -1,11 +1,19 @@
-"""
-09.2_Prepare_master_data_for_ML.py.py
-=====================
-Saves the master dataset parquet file as CSV for inspection.
+'''
+Docstring for 09.2_Prepare_master_data_for_ML
 
-Author: Chris
-Date: January 2026
-"""
+this script reads in the group2 master data, which is on an account level.
+it contains information on which accounts are late, how long it takes them to pay their bills, and how long they have been delinquent
+this script handles processing this data, by excluding people who have never made a payment (unactiavted),
+and makes some new variables which i don't think are getting used later to create the payment profile anyway
+
+inputs:
+- master_dataset_complete.parquet
+    from group2
+
+outputs:
+- master_dataset_complete.csv
+    into csv to be easier to inspect by eye
+'''
 
 import pandas as pd
 from pathlib import Path
@@ -13,9 +21,16 @@ from pathlib import Path
 # ================================================================
 # Configuration
 # ================================================================
+
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+profile_dir = base_dir / "payment_profile"
+profile_dir.mkdir(exist_ok=True)
+data_cleaning_dir = base_dir / "data_cleaning"
+
 INPUT_FILE = r"t:\projects\2025\RuralCo\Data provided by RuralCo 20251202\RuralCo2\Clean Code\master_dataset_complete.parquet"
-OUTPUT_DIR = Path("Payment Profile")
-OUTPUT_FILE = OUTPUT_DIR / "master_dataset_complete.csv"
+OUTPUT_DIR = profile_dir
+OUTPUT_FILE = profile_dir / "master_dataset_complete.csv"
 
 # ================================================================
 # Create output directory

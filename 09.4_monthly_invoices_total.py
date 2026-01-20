@@ -1,7 +1,21 @@
-"""
-Plot monthly total discounted prices for multiple time periods
-Four separate visualizations with different date ranges
-"""
+'''
+Docstring for 09.4_monthly_invoices_total
+
+this script generates monthly totals for different periods, and gives statistics for invoice data
+
+
+inputs:
+- ats_grouped_transformed_with_discounts.csv
+- invoice_grouped_transformed_with_discounts.csv
+
+outputs:
+- monthly_discounted_Period_1_2023-2024.png
+- monthly_discounted_Period_2_2024-2025.png
+- monthly_discounted_Period_3_FY2025.png
+- monthly_discounted_Period_4_Entire.png
+- period_comparison_summary.csv
+
+'''
 
 import pandas as pd
 import numpy as np
@@ -9,11 +23,39 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime
 import os
+from pathlib import Path
 
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(SCRIPT_DIR)
-print(f"Working directory set to: {os.getcwd()}")
+# ================================================================
+# Configuration
+# ================================================================
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+profile_dir = base_dir / "payment_profile"
+data_cleaning_dir = base_dir / "data_cleaning"
+visualisations_dir = base_dir / "visualisations"
+visualisations_dir.mkdir(exist_ok=True) 
+
+# ================================================================
+# Load invoice data
+# ================================================================
+print("="*70)
+print("LOADING INVOICE DATA")
+print("="*70)
+
+# Load combined invoice data
+ats_grouped = pd.read_csv(data_cleaning_dir / 'ats_grouped_transformed_with_discounts.csv')
+invoice_grouped = pd.read_csv(data_cleaning_dir / 'invoice_grouped_transformed_with_discounts.csv')
+
+# Combine datasets
+ats_grouped['customer_type'] = 'ATS'
+invoice_grouped['customer_type'] = 'Invoice'
+combined_df = pd.concat([ats_grouped, invoice_grouped], ignore_index=True)
+
+print(f"Total invoices loaded: {len(combined_df):,}")
+
+# Filter out negative prices
+combined_df = combined_df[combined_df['total_undiscounted_price'] >= 0].copy()
+print(f"After filtering negatives: {len(combined_df):,}")
 
 # Define the four time periods
 PERIODS = [
@@ -36,28 +78,6 @@ PERIODS = [
         'title': 'Monthly Total Discounted Price\nFY2025 (2024-03-31 to 2025-04-01)'
     }
 ]
-
-# ================================================================
-# Load invoice data
-# ================================================================
-print("="*70)
-print("LOADING INVOICE DATA")
-print("="*70)
-
-# Load combined invoice data
-ats_grouped = pd.read_csv('ats_grouped_transformed_with_discounts.csv')
-invoice_grouped = pd.read_csv('invoice_grouped_transformed_with_discounts.csv')
-
-# Combine datasets
-ats_grouped['customer_type'] = 'ATS'
-invoice_grouped['customer_type'] = 'Invoice'
-combined_df = pd.concat([ats_grouped, invoice_grouped], ignore_index=True)
-
-print(f"Total invoices loaded: {len(combined_df):,}")
-
-# Filter out negative prices
-combined_df = combined_df[combined_df['total_undiscounted_price'] >= 0].copy()
-print(f"After filtering negatives: {len(combined_df):,}")
 
 # ================================================================
 # Parse dates
@@ -190,7 +210,7 @@ print("="*70)
 all_monthly_data = {}
 
 for period in PERIODS:
-    save_path = f"monthly_discounted_{period['name']}.png"
+    save_path = visualisations_dir / f"monthly_discounted_{period['name']}.png"
     monthly_data = create_period_plot(combined_df, period, save_path)
     if monthly_data is not None:
         all_monthly_data[period['name']] = monthly_data
@@ -209,7 +229,7 @@ entire_period_info = {
     'title': 'Monthly Total Discounted Price\nEntire Period (2023-12-01 to 2025-12-31)'
 }
 
-save_path_entire = f"monthly_discounted_{entire_period_info['name']}.png"
+save_path_entire = visualisations_dir / f"monthly_discounted_{entire_period_info['name']}.png"
 entire_monthly_data = create_period_plot(combined_df, entire_period_info, save_path_entire)
 if entire_monthly_data is not None:
     all_monthly_data[entire_period_info['name']] = entire_monthly_data
@@ -237,7 +257,7 @@ summary_df = pd.DataFrame(summary_data)
 print("\n", summary_df.to_string(index=False))
 
 # Save summary
-summary_df.to_csv('period_comparison_summary.csv', index=False)
+summary_df.to_csv(profile_dir / 'period_comparison_summary.csv', index=False)
 print(f"\n✓ Saved summary to: period_comparison_summary.csv")
 
 print("\n" + "="*70)

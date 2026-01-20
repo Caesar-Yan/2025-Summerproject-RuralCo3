@@ -1,21 +1,22 @@
-"""
-10.1_Assume_uniform_late_rate_calibration.py
-==================================
-OPTION 2: Uniform Late Rate Approach
+'''
+Docstring for 10.1_Assume_uniform_late_rate_calibration
 
-Calibrate by finding a single late payment rate that applies to ALL deciles.
-Preserves decile-specific cd distributions (delinquency levels).
+this script scales the given late rates uniformly until it reaches the known interest revenue from 2025 annual report
 
-Target: $1,043,000 in interest revenue (WITH DISCOUNT scenario)
+inputs:
+- ats_grouped_transformed_with_discounts.csv
+- invoice_grouped_transformed_with_discounts.csv
+- decile_payment_profile.pkl
 
-Approach:
-- Set same prob_late for all deciles
-- Use binary search to find the rate that hits target
-- Keep decile-specific cd distributions unchanged
 
-Author: Chris
-Date: January 2026
-"""
+outputs:
+- decile_payment_profile_CALIBRATED_UNIFORM.pkl
+- 10.1_calibration_iterations_UNIFORM.csv
+- 10.1_FY2025_calibrated_UNIFORM_detailed.xlsx
+- 10.1_calibration_summary_UNIFORM.csv
+- 10.1_calibration_results_UNIFORM.png
+
+'''
 
 import pandas as pd
 import numpy as np
@@ -23,11 +24,7 @@ import matplotlib.pyplot as plt
 import pickle
 import os
 import copy
-
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(SCRIPT_DIR)
-print(f"Working directory set to: {os.getcwd()}")
+from pathlib import Path
 
 # ================================================================
 # CONFIGURATION
@@ -36,6 +33,12 @@ ANNUAL_INTEREST_RATE = 0.2395  # 23.95% p.a.
 RANDOM_SEED = 42
 PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
 
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+profile_dir = base_dir / "payment_profile"
+data_cleaning_dir = base_dir / "data_cleaning"
+visualisations_dir = base_dir / "visualisations"
+
 # Target revenue (actual observed) - FOR WITH DISCOUNT SCENARIO
 TARGET_REVENUE = 1_043_000  # $1.043M
 
@@ -43,7 +46,7 @@ TARGET_REVENUE = 1_043_000  # $1.043M
 FY2025_START = pd.Timestamp("2024-07-01")
 FY2025_END = pd.Timestamp("2025-06-30")
 
-OUTPUT_DIR = "FY2025_outputs_calibrated_UNIFORM"
+OUTPUT_DIR = visualisations_dir
 
 # CD level to payment timing mapping
 CD_TO_DAYS = {
@@ -74,8 +77,8 @@ print("\n" + "="*70)
 print("LOADING INVOICE DATA")
 print("="*70)
 
-ats_grouped = pd.read_csv('ats_grouped_transformed_with_discounts.csv')
-invoice_grouped = pd.read_csv('invoice_grouped_transformed_with_discounts.csv')
+ats_grouped = pd.read_csv(data_cleaning_dir / 'ats_grouped_transformed_with_discounts.csv')
+invoice_grouped = pd.read_csv(data_cleaning_dir / 'invoice_grouped_transformed_with_discounts.csv')
 
 ats_grouped['customer_type'] = 'ATS'
 invoice_grouped['customer_type'] = 'Invoice'
@@ -132,7 +135,7 @@ print("="*70)
 
 try:
     try:
-        with open('Payment Profile/decile_payment_profile_MODIFIED.pkl', 'rb') as f:
+        with open(profile_dir / 'decile_payment_profile.pkl', 'rb') as f:
             original_profile = pickle.load(f)
     except FileNotFoundError:
         with open('Payment Profile/decile_payment_profile.pkl', 'rb') as f:
@@ -412,19 +415,19 @@ print("SAVING RESULTS")
 print("="*70)
 
 # Save calibrated profile
-calibrated_profile_path = os.path.join(OUTPUT_DIR, 'decile_payment_profile_CALIBRATED_UNIFORM.pkl')
+calibrated_profile_path = os.path.join(profile_dir, 'decile_payment_profile_CALIBRATED_UNIFORM.pkl')
 with open(calibrated_profile_path, 'wb') as f:
     pickle.dump(calibrated_profile, f)
 print(f"✓ Saved calibrated profile: {calibrated_profile_path}")
 
 # Save iteration results
 iteration_df = pd.DataFrame(iteration_results)
-iteration_csv = os.path.join(OUTPUT_DIR, 'calibration_iterations_UNIFORM.csv')
+iteration_csv = os.path.join(OUTPUT_DIR, '10.1_calibration_iterations_UNIFORM.csv')
 iteration_df.to_csv(iteration_csv, index=False)
 print(f"✓ Saved iteration history: {iteration_csv}")
 
 # Save detailed simulations
-output_excel = os.path.join(OUTPUT_DIR, 'FY2025_calibrated_UNIFORM_detailed.xlsx')
+output_excel = os.path.join(OUTPUT_DIR, '10.1_FY2025_calibrated_UNIFORM_detailed.xlsx')
 with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
     with_discount_final.to_excel(writer, sheet_name='With_Discount', index=False)
     no_discount_final.to_excel(writer, sheet_name='No_Discount', index=False)
@@ -442,7 +445,7 @@ summary_data = {
     'Original_Avg_Late_Rate_Pct': avg_original_rate * 100
 }
 summary_df = pd.DataFrame([summary_data])
-summary_csv = os.path.join(OUTPUT_DIR, 'calibration_summary_UNIFORM.csv')
+summary_csv = os.path.join(OUTPUT_DIR, '10.1_calibration_summary_UNIFORM.csv')
 summary_df.to_csv(summary_csv, index=False)
 print(f"✓ Saved summary: {summary_csv}")
 
@@ -519,7 +522,7 @@ for bar in bars:
              ha='center', va='bottom', fontsize=11, fontweight='bold')
 
 plt.tight_layout()
-viz_path = os.path.join(OUTPUT_DIR, 'calibration_results_UNIFORM.png')
+viz_path = os.path.join(OUTPUT_DIR, '10.1_calibration_results_UNIFORM.png')
 plt.savefig(viz_path, dpi=300, bbox_inches='tight')
 print(f"✓ Saved visualization: {viz_path}")
 plt.close()

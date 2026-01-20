@@ -1,23 +1,4 @@
-"""
-10.3_FY2025_add_discount_amt_to_revenue.py
-====================================
-Apply calibrated payment profiles to FY2025 data to estimate revenue.
 
-MODIFICATION: For late invoices, add the discount amount to revenue
-- NO DISCOUNT scenario: interest + retained discounts (late invoices don't get discount)
-- WITH DISCOUNT scenario: interest only (on-time invoices get discount)
-
-This script:
-1. Loads both calibrated profiles (MULTIPLIER and UNIFORM)
-2. Applies each to FY2025 invoices
-3. For late invoices in NO DISCOUNT scenario: adds discount_amount to revenue
-4. Generates revenue estimates for both discount scenarios
-5. Creates comprehensive visualizations showing interest + retained discounts
-6. Compares results between the two calibration methods
-
-Author: Chris
-Date: January 2026
-"""
 
 import pandas as pd
 import numpy as np

@@ -1,25 +1,19 @@
-"""
-10_Calculcations_using_deciles_and_cd_for_timing.py
-====================================
-Simulate FY2025 invoice payments using decile payment profiles.
+'''
+Docstring for 10.0.2_Calculcations_using_deciles_and_cd_for_timing
 
-MODIFIED: Uses cd level to determine payment timing
-- cd level is sampled from P(cd | late) distribution
-- Payment timing is determined by cd level mapping:
-  cd=3: 60 days, cd=4: 90 days, cd=5: 120 days, etc.
+this script uses the cd_level to determine timing.
+it's like the previous 10_ scripts but i forgot to implement the same late selection that's in 10.0.1
 
-Key approach:
-1. Sort invoices by total_undiscounted_price
-2. Map each invoice to appropriate decile
-3. Apply decile-specific P(late)
-4. If late, sample cd level from P(cd | late)
-5. Use cd level to determine days overdue
-6. Calculate interest for both discount scenarios
+inputs:
+- ats_grouped_transformed_with_discounts.csv
+- invoice_grouped_transformed_with_discounts.csv
 
-Author: Chris
-Date: January 2026
-Modified: January 2026 - cd-based payment timing
-"""
+outputs:
+- 10.0.2_FY2025_cd_timing_comparison_summary.csv
+- 10.0.2_FY2025_cd_timing_detailed_simulations.xlsx
+- 10.0.2_cd_level_analysis.csv
+
+'''
 
 import pandas as pd
 import numpy as np
@@ -28,11 +22,7 @@ import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import pickle
 import os
-
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(SCRIPT_DIR)
-print(f"Working directory set to: {os.getcwd()}")
+from pathlib import Path
 
 # ================================================================
 # CONFIGURATION
@@ -41,11 +31,17 @@ ANNUAL_INTEREST_RATE = 0.2395  # 23.95% p.a.
 RANDOM_SEED = 42
 PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
 
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+profile_dir = base_dir / "payment_profile"
+data_cleaning_dir = base_dir / "data_cleaning"
+visualisations_dir = base_dir / "visualisations"
+
 # New Zealand FY2025 definition (April 1, 2024 - March 31, 2025)
 FY2025_START = pd.Timestamp("2024-07-01")
 FY2025_END = pd.Timestamp("2025-06-30")
 
-OUTPUT_DIR = "FY2025_outputs_cd_timing"
+OUTPUT_DIR = visualisations_dir
 
 # ================================================================
 # CD LEVEL TO PAYMENT TIMING MAPPING
@@ -68,9 +64,6 @@ for cd, days in sorted(CD_TO_DAYS.items()):
     months = days / 30
     print(f"  cd = {cd}: {days} days ({months:.1f} months) overdue")
 
-# Create output directory if it doesn't exist
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
 np.random.seed(RANDOM_SEED)
 
 # ================================================================
@@ -81,8 +74,8 @@ print("LOADING INVOICE DATA")
 print("="*70)
 
 # Load combined invoice data
-ats_grouped = pd.read_csv('ats_grouped_transformed_with_discounts.csv')
-invoice_grouped = pd.read_csv('invoice_grouped_transformed_with_discounts.csv')
+ats_grouped = pd.read_csv(data_cleaning_dir / 'ats_grouped_transformed_with_discounts.csv')
+invoice_grouped = pd.read_csv(data_cleaning_dir / 'invoice_grouped_transformed_with_discounts.csv')
 
 # Combine datasets
 ats_grouped['customer_type'] = 'ATS'
@@ -153,7 +146,7 @@ print("="*70)
 try:
     # Try to load MODIFIED profile first
     try:
-        with open('Payment Profile/decile_payment_profile_MODIFIED.pkl', 'rb') as f:
+        with open(profile_dir / 'decile_payment_profile.pkl', 'rb') as f:
             decile_profile = pickle.load(f)
         profile_version = "MODIFIED"
     except FileNotFoundError:
@@ -480,14 +473,14 @@ print(f"  No Discount: {summary_no['pct_late']:.1f}% late")
 # Create comparison DataFrame
 # ================================================================
 comparison_df = pd.DataFrame([summary_with, summary_no])
-output_csv = os.path.join(OUTPUT_DIR, 'FY2025_cd_timing_comparison_summary.csv')
+output_csv = os.path.join(OUTPUT_DIR, '10.0.2_FY2025_cd_timing_comparison_summary.csv')
 comparison_df.to_csv(output_csv, index=False)
 print(f"\n✓ Saved comparison summary to: {output_csv}")
 
 # ================================================================
 # Save detailed simulations
 # ================================================================
-output_excel = os.path.join(OUTPUT_DIR, 'FY2025_cd_timing_detailed_simulations.xlsx')
+output_excel = os.path.join(OUTPUT_DIR, '10.0.2_FY2025_cd_timing_detailed_simulations.xlsx')
 with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
     with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
     no_discount.to_excel(writer, sheet_name='No_Discount', index=False)

@@ -1,22 +1,4 @@
-"""
-10.1_Uniform_multiplier_Scale_late_rates.py
-================================
-OPTION 1: Uniform Multiplier Approach
 
-Calibrate late payment rates by applying a uniform multiplier to all deciles.
-This preserves the relative differences between deciles.
-
-Target: $1,043,000 in interest revenue (WITH DISCOUNT scenario)
-
-Approach:
-- Multiply all prob_late values by a constant factor
-- Use binary search to find the multiplier that hits target
-- Cap probabilities at 1.0
-- Preserve decile-specific cd distributions
-
-Author: Chris
-Date: January 2026
-"""
 
 import pandas as pd
 import numpy as np

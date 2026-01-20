@@ -1,18 +1,4 @@
-"""
-10.2_Calculations_on_FY2025_scaled_late_rates
-====================================
-Apply calibrated payment profiles to FY2025 data to estimate revenue.
 
-This script:
-1. Loads both calibrated profiles (MULTIPLIER and UNIFORM)
-2. Applies each to FY2025 invoices
-3. Generates revenue estimates for both discount scenarios
-4. Creates comprehensive visualizations
-5. Compares results between the two calibration methods
-
-Author: Chris
-Date: January 2026
-"""
 
 import pandas as pd
 import numpy as np

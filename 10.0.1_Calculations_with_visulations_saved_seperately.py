@@ -1,23 +1,23 @@
-"""
-FY2025_simulation_with_cd_timing.py - WITH CUMULATIVE VISUALIZATIONS
-=====================================================================
-Simulate FY2025 invoice payments using decile payment profiles.
+'''
+Docstring for 10.0.1_Calculations_with_visulations_saved_seperately
+same as script 10_, but only looks at interest difference, and applies same selection of late payments to each scenario.
+10_ has new selection of late payments for discount and non-discount, so really the other one should be not used.
 
-MODIFIED: Uses cd level to determine payment timing + Added cumulative visualizations
+inputs:
+- ats_grouped_transformed_with_discounts.csv 
+- invoice_grouped_transformed_with_discounts.csv 
+- decile_payment_profile.pkl 
 
-Key approach:
-1. Sort invoices by total_undiscounted_price
-2. Map each invoice to appropriate decile
-3. Apply decile-specific P(late)
-4. If late, sample cd level from P(cd | late)
-5. Use cd level to determine days overdue
-6. Calculate interest for both discount scenarios
-7. Create cumulative interest revenue visualizations
+outputs:
+- 10.0.1_1_cumulative_interest_revenue.png
+- 10.0.1_2_monthly_interest_revenue.png
+- 10.0.1_3_monthly_payment_count.png
+- 10.0.1_4_revenue_difference.png
+- 10.0.1_5_avg_interest_per_payment.png
+- 10.0.1_monthly_cumulative_interest.csv
+- 10.0.1_FY2025_cd_timing_detailed_simulations.xlsx
 
-Author: Chris
-Date: January 2026
-Modified: January 2026 - cd-based payment timing + cumulative visualizations
-"""
+'''
 
 import pandas as pd
 import numpy as np
@@ -26,11 +26,7 @@ import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import pickle
 import os
-
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(SCRIPT_DIR)
-print(f"Working directory set to: {os.getcwd()}")
+from pathlib import Path
 
 # ================================================================
 # CONFIGURATION
@@ -39,11 +35,17 @@ ANNUAL_INTEREST_RATE = 0.2395  # 23.95% p.a.
 RANDOM_SEED = 42
 PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
 
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+profile_dir = base_dir / "payment_profile"
+data_cleaning_dir = base_dir / "data_cleaning"
+visualisations_dir = base_dir / "visualisations"
+
 # New Zealand FY2025 definition (April 1, 2024 - March 31, 2025)
 FY2025_START = pd.Timestamp("2024-07-01")
 FY2025_END = pd.Timestamp("2025-06-30")
 
-OUTPUT_DIR = "FY2025_outputs_cd_timing"
+OUTPUT_DIR = visualisations_dir
 
 # ================================================================
 # CD LEVEL TO PAYMENT TIMING MAPPING
@@ -79,8 +81,8 @@ print("LOADING INVOICE DATA")
 print("="*70)
 
 # Load combined invoice data
-ats_grouped = pd.read_csv('ats_grouped_transformed_with_discounts.csv')
-invoice_grouped = pd.read_csv('invoice_grouped_transformed_with_discounts.csv')
+ats_grouped = pd.read_csv(data_cleaning_dir / 'ats_grouped_transformed_with_discounts.csv')
+invoice_grouped = pd.read_csv(data_cleaning_dir / 'invoice_grouped_transformed_with_discounts.csv')
 
 # Combine datasets
 ats_grouped['customer_type'] = 'ATS'
@@ -150,7 +152,7 @@ print("="*70)
 try:
     # Try to load MODIFIED profile first
     try:
-        with open('Payment Profile/decile_payment_profile_MODIFIED.pkl', 'rb') as f:
+        with open(profile_dir / 'decile_payment_profile.pkl', 'rb') as f:
             decile_profile = pickle.load(f)
         profile_version = "MODIFIED"
     except FileNotFoundError:
@@ -448,7 +450,7 @@ ax1.annotate(f'Final: ${final_no:,.0f}',
              bbox=dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor='#4472C4'))
 
 plt.tight_layout()
-output_1 = os.path.join(OUTPUT_DIR, '1_cumulative_interest_revenue.png')
+output_1 = os.path.join(OUTPUT_DIR, '10.0.1_1_cumulative_interest_revenue.png')
 plt.savefig(output_1, dpi=300, bbox_inches='tight')
 print(f"✓ Saved: {output_1}")
 plt.close()
@@ -480,7 +482,7 @@ ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 ax2.tick_params(axis='x', rotation=45)
 
 plt.tight_layout()
-output_2 = os.path.join(OUTPUT_DIR, '2_monthly_interest_revenue.png')
+output_2 = os.path.join(OUTPUT_DIR, '10.0.1_2_monthly_interest_revenue.png')
 plt.savefig(output_2, dpi=300, bbox_inches='tight')
 print(f"✓ Saved: {output_2}")
 plt.close()
@@ -507,7 +509,7 @@ ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 ax3.tick_params(axis='x', rotation=45)
 
 plt.tight_layout()
-output_3 = os.path.join(OUTPUT_DIR, '3_monthly_payment_count.png')
+output_3 = os.path.join(OUTPUT_DIR, '10.0.1_3_monthly_payment_count.png')
 plt.savefig(output_3, dpi=300, bbox_inches='tight')
 print(f"✓ Saved: {output_3}")
 plt.close()
@@ -547,7 +549,7 @@ legend_elements = [
 ax4.legend(handles=legend_elements, loc='upper left', fontsize=12)
 
 plt.tight_layout()
-output_4 = os.path.join(OUTPUT_DIR, '4_revenue_difference.png')
+output_4 = os.path.join(OUTPUT_DIR, '10.0.1_4_revenue_difference.png')
 plt.savefig(output_4, dpi=300, bbox_inches='tight')
 print(f"✓ Saved: {output_4}")
 plt.close()
@@ -578,7 +580,7 @@ ax5.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 ax5.tick_params(axis='x', rotation=45)
 
 plt.tight_layout()
-output_5 = os.path.join(OUTPUT_DIR, '5_avg_interest_per_payment.png')
+output_5 = os.path.join(OUTPUT_DIR, '10.0.1_5_avg_interest_per_payment.png')
 plt.savefig(output_5, dpi=300, bbox_inches='tight')
 print(f"✓ Saved: {output_5}")
 plt.close()
@@ -594,12 +596,12 @@ monthly_combined = pd.merge(
     how='outer'
 ).sort_values('payment_date')
 
-monthly_csv = os.path.join(OUTPUT_DIR, 'monthly_cumulative_interest.csv')
+monthly_csv = os.path.join(OUTPUT_DIR, '10.0.1_monthly_cumulative_interest.csv')
 monthly_combined.to_csv(monthly_csv, index=False)
 print(f"✓ Saved monthly cumulative data to: {monthly_csv}")
 
 # Save detailed simulations
-output_excel = os.path.join(OUTPUT_DIR, 'FY2025_cd_timing_detailed_simulations.xlsx')
+output_excel = os.path.join(OUTPUT_DIR, '10.0.1_FY2025_cd_timing_detailed_simulations.xlsx')
 with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
     with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
     no_discount.to_excel(writer, sheet_name='No_Discount', index=False)

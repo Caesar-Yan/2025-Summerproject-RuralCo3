@@ -1,30 +1,22 @@
-"""
-10.3_Calculations_using_deciles_and_cd_for_timing.py
-====================================
-Simulate FY2025 invoice payments using decile payment profiles.
+'''
+Docstring for 10_Calculation_wtih_cd_deciles_and_retentions
 
-MODIFIED: 
-1. Uses cd level to determine payment timing
-2. For NO DISCOUNT scenario, adds retained discount amounts to revenue
+this script makes estiamtes of revenue generated under discount and no-discount scenarios,
+i.e. the current and proposed models.
+late rates and how late payments are when late are estimated using the real data 
+from group2's data. these profiles can be found in payment profile folder under ruralco3
 
-- cd level is sampled from P(cd | late) distribution
-- Payment timing is determined by cd level mapping:
-  cd=3: 60 days, cd=4: 90 days, cd=5: 120 days, etc.
-- Late invoices in NO DISCOUNT scenario don't get discount → retained as revenue
+inputs:
+- ats_grouped_transformed_with_discounts.csv
+- invoice_grouped_transformed_with_discounts.csv
 
-Key approach:
-1. Sort invoices by total_undiscounted_price
-2. Map each invoice to appropriate decile
-3. Apply decile-specific P(late)
-4. If late, sample cd level from P(cd | late)
-5. Use cd level to determine days overdue
-6. Calculate interest for both discount scenarios
-7. For NO DISCOUNT: Add retained discounts for late invoices to revenue
+outputs:
+- 10_FY2025_cd_timing_comparison_summary.csv
+- 10_FY2025_cd_timing_detailed_simulations.xlsx
+- 10_cd_level_analysis.csv
+- 10_cumulative_revenue_with_target_and_components.png
 
-Author: Chris
-Date: January 2026
-Modified: January 2026 - cd-based payment timing + retained discounts
-"""
+'''
 
 import pandas as pd
 import numpy as np
@@ -33,15 +25,17 @@ import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import pickle
 import os
-
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(SCRIPT_DIR)
-print(f"Working directory set to: {os.getcwd()}")
+from pathlib import Path
 
 # ================================================================
 # CONFIGURATION
 # ================================================================
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+profile_dir = base_dir / "payment_profile"
+data_cleaning_dir = base_dir / "data_cleaning"
+visualisations_dir = base_dir / "visualisations"
+
 ANNUAL_INTEREST_RATE = 0.2395  # 23.95% p.a.
 RANDOM_SEED = 42
 PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
@@ -50,7 +44,7 @@ PAYMENT_TERMS_MONTHS = 20 / 30  # 20 days = 0.67 months
 FY2025_START = pd.Timestamp("2024-07-01")
 FY2025_END = pd.Timestamp("2025-06-30")
 
-OUTPUT_DIR = "FY2025_outputs_cd_timing_WITH_RETAINED_DISCOUNTS"
+OUTPUT_DIR = visualisations_dir
 
 # ================================================================
 # CD LEVEL TO PAYMENT TIMING MAPPING
@@ -73,9 +67,6 @@ for cd, days in sorted(CD_TO_DAYS.items()):
     months = days / 30
     print(f"  cd = {cd}: {days} days ({months:.1f} months) overdue")
 
-# Create output directory if it doesn't exist
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
 np.random.seed(RANDOM_SEED)
 
 # ================================================================
@@ -86,8 +77,8 @@ print("LOADING INVOICE DATA")
 print("="*70)
 
 # Load combined invoice data
-ats_grouped = pd.read_csv('ats_grouped_transformed_with_discounts.csv')
-invoice_grouped = pd.read_csv('invoice_grouped_transformed_with_discounts.csv')
+ats_grouped = pd.read_csv(data_cleaning_dir / 'ats_grouped_transformed_with_discounts.csv')
+invoice_grouped = pd.read_csv(data_cleaning_dir / 'invoice_grouped_transformed_with_discounts.csv')
 
 # Combine datasets
 ats_grouped['customer_type'] = 'ATS'
@@ -157,7 +148,7 @@ print("="*70)
 try:
     # Try to load MODIFIED profile first
     try:
-        with open('Payment Profile/decile_payment_profile_MODIFIED.pkl', 'rb') as f:
+        with open(profile_dir / 'decile_payment_profile.pkl', 'rb') as f:
             decile_profile = pickle.load(f)
         profile_version = "MODIFIED"
     except FileNotFoundError:
@@ -510,14 +501,14 @@ print(f"  No Discount: {summary_no['pct_late']:.1f}% late")
 # Create comparison DataFrame
 # ================================================================
 comparison_df = pd.DataFrame([summary_with, summary_no])
-output_csv = os.path.join(OUTPUT_DIR, 'FY2025_cd_timing_comparison_summary.csv')
+output_csv = os.path.join(OUTPUT_DIR, '10_FY2025_cd_timing_comparison_summary.csv')
 comparison_df.to_csv(output_csv, index=False)
 print(f"\n✓ Saved comparison summary to: {output_csv}")
 
 # ================================================================
 # Save detailed simulations
 # ================================================================
-output_excel = os.path.join(OUTPUT_DIR, 'FY2025_cd_timing_detailed_simulations.xlsx')
+output_excel = os.path.join(OUTPUT_DIR, '10_FY2025_cd_timing_detailed_simulations.xlsx')
 with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
     with_discount.to_excel(writer, sheet_name='With_Discount', index=False)
     no_discount.to_excel(writer, sheet_name='No_Discount', index=False)
@@ -554,7 +545,7 @@ for scenario_name, df in [("With Discount", with_discount), ("No Discount", no_d
 
 if cd_analysis:
     cd_analysis_df = pd.concat(cd_analysis, ignore_index=True)
-    cd_analysis_file = os.path.join(OUTPUT_DIR, 'cd_level_analysis.csv')
+    cd_analysis_file = os.path.join(OUTPUT_DIR, '10_cd_level_analysis.csv')
     cd_analysis_df.to_csv(cd_analysis_file, index=False)
     print(f"✓ Saved cd level analysis to: {cd_analysis_file}")
     
@@ -666,7 +657,7 @@ ax.annotate(f'No Discount Total\n${final_no:,.0f}\n(Int: ${final_interest:,.0f}\
             bbox=dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor='#4472C4', linewidth=2))
 
 plt.tight_layout()
-viz_path = os.path.join(OUTPUT_DIR, 'cumulative_revenue_with_target_and_components.png')
+viz_path = os.path.join(OUTPUT_DIR, '10_cumulative_revenue_with_target_and_components.png')
 plt.savefig(viz_path, dpi=300, bbox_inches='tight')
 print(f"  ✓ Saved: {viz_path}")
 plt.close()

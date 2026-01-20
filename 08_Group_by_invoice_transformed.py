@@ -22,11 +22,15 @@ outputs:
 
 '''
 
-
-
 import pandas as pd
 import numpy as np
 import pickle
+from pathlib import Path
+
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+output_dir = base_dir / "data_cleaning"
+output_dir.mkdir(exist_ok=True)
 
 # ================================================================
 # Load the two imputed line-item datasets
@@ -34,8 +38,8 @@ import pickle
 ats_path = "datetime_parsed_ats_invoice_line_item_df_transformed.csv"
 invoice_path = "datetime_parsed_invoice_line_item_df_transformed.csv"
 
-ats = pd.read_csv(ats_path)
-invoice = pd.read_csv(invoice_path)
+ats = pd.read_csv(output_dir / ats_path)
+invoice = pd.read_csv(output_dir / invoice_path)
 
 print(f"Loaded ATS dataset: {len(ats):,} line-items")
 print(f"Loaded Invoice dataset: {len(invoice):,} line-items")
@@ -80,6 +84,6 @@ print("\nInvoice Sample:")
 print(invoice_grouped.head())
 
 # Optional: Save the grouped data
-ats_grouped.to_csv('ats_grouped_by_invoice_transformed.csv', index=False)
-invoice_grouped.to_csv('invoice_grouped_by_invoice_transformed.csv', index=False)
+ats_grouped.to_csv(output_dir / 'ats_grouped_by_invoice_transformed.csv', index=False)
+invoice_grouped.to_csv(output_dir / 'invoice_grouped_by_invoice_transformed.csv', index=False)
 print("\nSaved grouped_transformed datasets to CSV files")

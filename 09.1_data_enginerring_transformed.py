@@ -3,25 +3,32 @@ Docstring for 09.1_data_enginerring_transformed
 
 this script is taking the final cleaned dataframes and generates some statistics about the column variables
 
+inputs:
+- ats_grouped_by_invoice_transformed.csv
+- invoice_grouped_by_invoice_transformed.csv
 
-
-
-
-
-ats_grouped.to_csv('ats_grouped_transformed_with_discounts.csv', index=False)
-invoice_grouped.to_csv('invoice_grouped_transformed_with_discounts.csv', index=False)
-results.to_csv('discount_analysis_results_transformed.csv', index=False)
+outputs:
+- ats_grouped_transformed_with_discounts.csv
+- invoice_grouped_transformed_with_discounts.csv
+- discount_analysis_results_transformed.csv
 
 """
 
 import pandas as pd
 import numpy as np
+from pathlib import Path
+
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+profile_dir = base_dir / "payment_profile"
+profile_dir.mkdir(exist_ok=True)
+data_cleaning_dir = base_dir / "data_cleaning"
 
 # ================================================================
 # Load the grouped invoice datasets (already has invoice_period)
 # ================================================================
-ats_grouped = pd.read_csv('ats_grouped_by_invoice_transformed.csv')
-invoice_grouped = pd.read_csv('invoice_grouped_by_invoice_transformed.csv')
+ats_grouped = pd.read_csv(data_cleaning_dir / 'ats_grouped_by_invoice_transformed.csv')
+invoice_grouped = pd.read_csv(data_cleaning_dir / 'invoice_grouped_by_invoice_transformed.csv')
 
 print(f"Loaded ATS grouped data: {len(ats_grouped):,} invoices")
 print(f"Loaded Invoice grouped data: {len(invoice_grouped):,} invoices")
@@ -99,9 +106,9 @@ print(results.to_string(index=False))
 # ================================================================
 # Save all outputs
 # ================================================================
-ats_grouped.to_csv('ats_grouped_transformed_with_discounts.csv', index=False)
-invoice_grouped.to_csv('invoice_grouped_transformed_with_discounts.csv', index=False)
-results.to_csv('discount_analysis_results_transformed.csv', index=False)
+ats_grouped.to_csv(data_cleaning_dir / 'ats_grouped_transformed_with_discounts.csv', index=False)
+invoice_grouped.to_csv(data_cleaning_dir / 'invoice_grouped_transformed_with_discounts.csv', index=False)
+results.to_csv(data_cleaning_dir / 'discount_analysis_results_transformed.csv', index=False)
 
 print("\n" + "="*70)
 print("SAVED FILES:")
