@@ -15,13 +15,6 @@ outputs:
 - 10.2_3_cumulative_revenue_over_time.png
 - 10.2_4_revenue_by_decile.png
 
-
-print("  1. calibrated_methods_comparison.csv - Summary comparison")
-print("  2. FY2025_[METHOD]_detailed.xlsx - Detailed simulations (each method)")
-print("  3. 1_revenue_comparison.png - Revenue bar chart")
-print("  4. 2_late_rates_by_decile.png - Late rates by decile")
-print("  5. 3_cumulative_revenue_over_time.png - Cumulative revenue trends")
-print("  6. 4_revenue_by_decile.png - Revenue breakdown by decile")
 '''
 
 import pandas as pd

@@ -1,5 +1,5 @@
 '''
-Docstring for 08.1_group_by_invoice_transformed
+Docstring for 08_group_by_invoice_transformed
 
 this script groups line_items by invoice_id and keeps only the invoice period and total prices data. 
 also calculates a discount_amount on the difference of undiscounted_price and discounted_price

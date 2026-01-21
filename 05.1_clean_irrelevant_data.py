@@ -1,9 +1,10 @@
 '''
-Docstring for 05.1_dates_parser_credit_is_neg
+Docstring for 05.1_clean_irrelevant_data.py
 
 this script is simply standardising credit and negative values. 
 according to the column variable debit_credit_indicator, debits are to be positive, and credits are to be negative
 it also clears periods with incomplete invoice data, as signalled by invoice count <20,000
+also filter out invoices with undiscounted_price = 0
 
 inputs:
 - datetime_parsed_ats_invoice_line_item_df.csv
@@ -227,3 +228,111 @@ print(f"\nTotal: {invoice_period_counts['invoice_count'].sum()}")
 print("\nINVOICE - Invoices per month (by date_from_invoice):")
 print(date_from_invoice_counts.to_string(index=False))
 print(f"\nTotal: {date_from_invoice_counts['invoice_count'].sum()}")
+
+# ============================================================================================================
+# FILTER OUT ROWS WITH UNDISCOUNTED_PRICE = 0
+# ============================================================================================================
+print("\n" + "="*80)
+print("FILTERING ROWS WITH UNDISCOUNTED_PRICE = 0")
+print("="*80)
+
+# Filter ATS dataframe
+print(f"\nATS DataFrame:")
+print(f"  Before filtering: {len(ats_df_transformed):,} rows")
+zero_price_ats = (ats_df_transformed['undiscounted_price'] == 0).sum()
+print(f"  Rows with undiscounted_price = 0: {zero_price_ats:,}")
+
+ats_df_transformed = ats_df_transformed[ats_df_transformed['undiscounted_price'] != 0].copy()
+print(f"  After filtering: {len(ats_df_transformed):,} rows")
+
+# Filter Invoice dataframe
+print(f"\nInvoice DataFrame:")
+print(f"  Before filtering: {len(invoice_df_transformed):,} rows")
+zero_price_invoice = (invoice_df_transformed['undiscounted_price'] == 0).sum()
+print(f"  Rows with undiscounted_price = 0: {zero_price_invoice:,}")
+
+invoice_df_transformed = invoice_df_transformed[invoice_df_transformed['undiscounted_price'] != 0].copy()
+print(f"  After filtering: {len(invoice_df_transformed):,} rows")
+
+print("="*80)
+
+# Re-save the filtered dataframes (overwriting previous versions)
+ats_df_transformed.to_csv(output_dir / ats_output_file, index=False)
+invoice_df_transformed.to_csv(output_dir / invoice_output_file, index=False)
+
+print("\n" + "="*80)
+print("UPDATED FILES SAVED AFTER ZERO PRICE FILTERING")
+print("="*80)
+print(f"Updated ATS data saved to: {ats_output_file}")
+print(f"Updated Invoice data saved to: {invoice_output_file}")
+
+# ============================================================================================================
+# REGENERATE SUMMARY DATAFRAMES AFTER ZERO PRICE FILTERING
+# ============================================================================================================
+print("\n" + "="*80)
+print("REGENERATING INVOICE COUNT SUMMARY - ATS (AFTER ZERO PRICE FILTER)")
+print("="*80)
+
+# For ATS dataframe
+ats_invoice_period_dt = pd.to_datetime(ats_df_transformed['invoice_period'])
+ats_date_from_invoice_dt = pd.to_datetime(ats_df_transformed['date_from_invoice'])
+
+ats_invoice_period_counts = ats_df_transformed.groupby(
+    ats_invoice_period_dt.dt.to_period('M')
+).size().reset_index(name='count')
+ats_invoice_period_counts.columns = ['month', 'invoice_count']
+ats_invoice_period_counts['month'] = ats_invoice_period_counts['month'].astype(str)
+
+ats_date_from_invoice_counts = ats_df_transformed.groupby(
+    ats_date_from_invoice_dt.dt.to_period('M')
+).size().reset_index(name='count')
+ats_date_from_invoice_counts.columns = ['month', 'invoice_count']
+ats_date_from_invoice_counts['month'] = ats_date_from_invoice_counts['month'].astype(str)
+
+# Save updated ATS summary dataframes
+ats_invoice_period_counts.to_csv(output_dir / 'ats_invoice_period_monthly_counts-transformed.csv', index=False)
+ats_date_from_invoice_counts.to_csv(output_dir / 'ats_date_from_invoice_monthly_counts-transformed.csv', index=False)
+
+print("\nATS - Invoices per month (by invoice_period) - AFTER ZERO PRICE FILTER:")
+print(ats_invoice_period_counts.to_string(index=False))
+print(f"\nTotal: {ats_invoice_period_counts['invoice_count'].sum():,}")
+
+print("\nATS - Invoices per month (by date_from_invoice) - AFTER ZERO PRICE FILTER:")
+print(ats_date_from_invoice_counts.to_string(index=False))
+print(f"\nTotal: {ats_date_from_invoice_counts['invoice_count'].sum():,}")
+
+# For Invoice dataframe
+print("\n" + "="*80)
+print("REGENERATING INVOICE COUNT SUMMARY - INVOICE (AFTER ZERO PRICE FILTER)")
+print("="*80)
+
+invoice_period_dt = pd.to_datetime(invoice_df_transformed['invoice_period'])
+date_from_invoice_dt = pd.to_datetime(invoice_df_transformed['date_from_invoice'])
+
+invoice_period_counts = invoice_df_transformed.groupby(
+    invoice_period_dt.dt.to_period('M')
+).size().reset_index(name='count')
+invoice_period_counts.columns = ['month', 'invoice_count']
+invoice_period_counts['month'] = invoice_period_counts['month'].astype(str)
+
+date_from_invoice_counts = invoice_df_transformed.groupby(
+    date_from_invoice_dt.dt.to_period('M')
+).size().reset_index(name='count')
+date_from_invoice_counts.columns = ['month', 'invoice_count']
+date_from_invoice_counts['month'] = date_from_invoice_counts['month'].astype(str)
+
+# Save updated Invoice summary dataframes
+invoice_period_counts.to_csv(output_dir / 'invoice_period_monthly_counts-transformed.csv', index=False)
+date_from_invoice_counts.to_csv(output_dir / 'date_from_invoice_monthly_counts-transformed.csv', index=False)
+
+print("\nINVOICE - Invoices per month (by invoice_period) - AFTER ZERO PRICE FILTER:")
+print(invoice_period_counts.to_string(index=False))
+print(f"\nTotal: {invoice_period_counts['invoice_count'].sum():,}")
+
+print("\nINVOICE - Invoices per month (by date_from_invoice) - AFTER ZERO PRICE FILTER:")
+print(date_from_invoice_counts.to_string(index=False))
+print(f"\nTotal: {date_from_invoice_counts['invoice_count'].sum():,}")
+
+print("\n" + "="*80)
+print("ALL PROCESSING COMPLETE!")
+print("="*80)
