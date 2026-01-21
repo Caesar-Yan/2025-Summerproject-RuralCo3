@@ -15,7 +15,6 @@ outputs:
 - 10.3_2_late_rates_by_decile.png
 - 10.3_3_cumulative_revenue_over_time_with_target.png
 - 10.3_4_revenue_by_decile.png
-
 '''
 
 import pandas as pd
