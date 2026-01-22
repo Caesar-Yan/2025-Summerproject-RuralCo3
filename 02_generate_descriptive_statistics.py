@@ -1,3 +1,9 @@
+'''
+Docstring for 02_generate_descriptive_statistics
+
+this script is just for generating some data overview stats
+'''
+
 import pandas as pd
 import numpy as np
 import pickle

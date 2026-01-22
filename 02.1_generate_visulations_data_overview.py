@@ -1,11 +1,24 @@
+'''
+Docstring for 02.1_generate_visulations_data_overview
+
+this script takes information from 02_, and makes visualisations
+'''
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pickle
+from pathlib import Path
 
-# Load your data
-with open('all_data.pkl', 'rb') as f:
+# Define base directories
+base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/RuralCo3")
+
+# Output directory for processed data
+data_cleaning_dir = base_dir / "data_cleaning"
+
+# Load pickled data
+with open(base_dir / "all_data.pkl", 'rb') as f:
     all_data = pickle.load(f)
 
 # Option 1: If you want to analyze your imputed data
@@ -125,10 +138,10 @@ if __name__ == "__main__":
     
     sparsity_results = create_sparsity_visualizations(
         all_data, 
-        output_prefix='sparsity',
-        exclude_tables=exclude_list
+        output_prefix = data_cleaning_dir,
+        exclude_tables = exclude_list
     )
     
     # Optionally save the sparsity data
-    sparsity_results.to_csv('sparsity_analysis.csv', index=False)
+    sparsity_results.to_csv(data_cleaning_dir / 'sparsity_analysis.csv', index=False)
     print(f"\n✓ Sparsity data saved to sparsity_analysis.csv")

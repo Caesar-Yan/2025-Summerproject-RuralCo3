@@ -73,9 +73,9 @@ PERIODS = [
     },
     {
         'name': 'Period_3_FY2025',
-        'start': pd.Timestamp("2024-03-31"),
-        'end': pd.Timestamp("2025-04-01"),
-        'title': 'Monthly Total Discounted Price\nFY2025 (2024-03-31 to 2025-04-01)'
+        'start': pd.Timestamp("2024-06-30"),
+        'end': pd.Timestamp("2025-07-01"),
+        'title': 'Monthly Total Discounted Price\nFY2025 (2024-06-30 to 2025-07-01)'
     }
 ]
 
@@ -257,7 +257,7 @@ summary_df = pd.DataFrame(summary_data)
 print("\n", summary_df.to_string(index=False))
 
 # Save summary
-summary_df.to_csv(profile_dir / 'period_comparison_summary.csv', index=False)
+summary_df.to_csv(profile_dir / '9.4_period_comparison_summary.csv', index=False)
 print(f"\n✓ Saved summary to: period_comparison_summary.csv")
 
 print("\n" + "="*70)
