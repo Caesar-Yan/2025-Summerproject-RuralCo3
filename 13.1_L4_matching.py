@@ -616,3 +616,66 @@ print(f"Total rows in dataset: {len(full_df):,}")
 print(f"Less discounts rows flagged: {mask_less_discount_full.sum():,}")
 print(f"Remaining unmatched rows: {len(remaining_unmatched_df):,}")
 print(f"{'='*70}")
+
+# =========================================================================================================================
+# RURALCO CARD ANNUAL FEE ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "ruralco card annual fee" in description column
+mask_ruralco_card_fee = remaining_unmatched_df['description'].str.lower() == 'ruralco card annual fee'
+
+ruralco_card_fee_df = save_and_summarize2(
+    remaining_unmatched_df, 
+    mask_ruralco_card_fee, 
+    '13.1_filtered_mask_WIP.csv',
+    'ruralco card annual fee',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'ruralco card annual fee':")
+print(ruralco_card_fee_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH RURALCO CARD ANNUAL FEE FLAGS
+# =========================================================
+# Update the ruralco card annual fee rows in the FULL dataframe
+mask_ruralco_card_fee_full = (
+    (full_df['description'].str.lower() == 'ruralco card annual fee') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_ruralco_card_fee_full, 'match_layer'] = 'L4_bookkeeping_artefacts'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_ruralco_card_fee_full.sum():,} ruralco card annual fee rows to 'L4_bookkeeping_artefacts'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.1_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.1_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+remaining_unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.1_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after ruralco card annual fee update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L4 RURALCO CARD ANNUAL FEE MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"Ruralco card annual fee rows flagged: {mask_ruralco_card_fee_full.sum():,}")
+print(f"Remaining unmatched rows: {len(remaining_unmatched_df):,}")
+print(f"{'='*70}")
