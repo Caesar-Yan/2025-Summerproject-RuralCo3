@@ -1,3 +1,23 @@
+'''
+Docstring for 12.3_Final_match
+
+this script combines first-layer (L1) and second-layer (L2) merchant matching results
+for undiscounted invoice line items.
+L1 matches are taken directly from merchant_identifier-based matching, while L2 matches
+are inferred from description-based token matching using Merchant Discount Detail.
+separate L2 columns are populated for previously-unmatched rows, and a match_layer
+flag is added to indicate whether each line was matched via L1, L2, or remains unmatched.
+
+inputs:
+- 12_invoice_line_items_undiscounted_matched_merchant.csv
+- Merchant Discount Detail.xlsx
+
+outputs:
+- 12_invoice_line_items_undiscounted_matched_merchant_L1L2.csv
+    invoice line items with consolidated L1 and L2 merchant matching results,
+    including match_layer indicators and separate L2 match fields
+'''
+
 import pandas as pd
 import os
 import re
@@ -69,3 +89,4 @@ df.loc[l1_matched, "match_layer"] = "L1"
 df.loc[~l1_matched & df["matched_account_name_L2"].notna(), "match_layer"] = "L2"
 
 df.to_csv(OUT_PATH, index=False)
+
