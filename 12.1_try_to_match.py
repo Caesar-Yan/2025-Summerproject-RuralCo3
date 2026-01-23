@@ -1,3 +1,22 @@
+'''
+Docstring for 12.1_try_to_match
+
+this script attempts to match undiscounted invoice line items to merchants in the
+Merchant Discount Detail reference file.
+merchant_identifier values are normalized (lowercased, punctuation removed, common
+suffixes removed) and then matched conservatively using exact / substring containment.
+matched merchant metadata and discount fields are appended to each invoice line.
+
+inputs:
+- 12_invoice_line_items_undiscounted_only.csv
+- Merchant Discount Detail.xlsx
+
+outputs:
+- 12_invoice_line_items_undiscounted_matched_merchant.csv
+    undiscounted invoice line items with additional columns for matched merchant
+    details (ats number, account name) and discount reference fields
+'''
+
 import pandas as pd
 import os
 import re
@@ -130,3 +149,4 @@ invoice_df.to_csv(OUTPUT_PATH, index=False)
 
 print(f"Saved matched file to:\n{OUTPUT_PATH}")
 print("=" * 70)
+
