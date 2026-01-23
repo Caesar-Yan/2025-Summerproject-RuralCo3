@@ -1,3 +1,24 @@
+'''
+Docstring for 12.2_L2_matching
+
+this script performs a second-layer (L2) merchant matching for invoice line items
+that were not matched in the first pass.
+it uses description-based matching by normalizing the invoice description text and
+searching for representative merchant tokens derived from Merchant Discount Detail
+account names.
+when a token is found in the description, the corresponding merchant metadata and
+discount fields are appended, and match_source is set to "description".
+
+inputs:
+- 12_invoice_line_items_undiscounted_matched_merchant.csv
+- Merchant Discount Detail.xlsx
+
+outputs:
+- 12_invoice_line_items_undiscounted_matched_merchant_L2.csv
+    invoice line items with additional L2 matches applied for previously-unmatched
+    rows, including matched merchant fields and a match_source indicator
+'''
+
 import pandas as pd
 import os
 import re
@@ -108,4 +129,5 @@ for row in token_df.itertuples(index=False):
 # Save result
 # =========================================================
 df.to_csv(OUT_PATH, index=False)
+
 
