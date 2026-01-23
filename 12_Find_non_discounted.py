@@ -1,3 +1,21 @@
+''' 
+Docstring for 12_Find_non_discounted
+
+this script identifies invoice line items that did not receive any discount by
+comparing undiscounted_price and discounted_price values.
+only rows where both prices are present and equal are retained.
+the resulting dataset is used to isolate non-discounted transactions for
+downstream analysis.
+
+inputs:
+- datetime_parsed_invoice_line_item_df_transformed.csv
+
+outputs:
+- 12_invoice_line_items_undiscounted_only.csv
+    filtered invoice_line_item dataset containing only non-discounted line items,
+    including pricing fields, merchant information, and transaction dates
+'''
+
 import pandas as pd
 import os
 
@@ -69,3 +87,4 @@ undiscounted_df.to_csv(OUTPUT_PATH, index=False)
 print("=" * 60)
 print(f"Saved file to:\n{OUTPUT_PATH}")
 print("=" * 60)
+
