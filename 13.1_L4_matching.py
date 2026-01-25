@@ -679,3 +679,65 @@ print(f"Total rows in dataset: {len(full_df):,}")
 print(f"Ruralco card annual fee rows flagged: {mask_ruralco_card_fee_full.sum():,}")
 print(f"Remaining unmatched rows: {len(remaining_unmatched_df):,}")
 print(f"{'='*70}")
+
+# =========================================================================================================================
+# NULL DESCRIPTION ANALYSIS
+# =========================================================================================================================
+# Filter for rows with null description values
+mask_null_desc = remaining_unmatched_df['description'].isna()
+
+null_desc_df = save_and_summarize2(
+    remaining_unmatched_df, 
+    mask_null_desc, 
+    '13.1_filtered_mask_WIP.csv',
+    'null description',
+    output_dir=output_dir
+)
+
+# Print count of null description rows
+print(f"\nRows with null description values: {mask_null_desc.sum():,}")
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH NULL DESCRIPTION FLAGS
+# =========================================================
+# Update the null description rows in the FULL dataframe
+mask_null_desc_full = (
+    full_df['description'].isna() & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_null_desc_full, 'match_layer'] = 'L4_no_desc'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_null_desc_full.sum():,} null description rows to 'L4_no_desc'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.1_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.1_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+remaining_unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.1_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after null description update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L4 NULL DESCRIPTION MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"Null description rows flagged: {mask_null_desc_full.sum():,}")
+print(f"Remaining unmatched rows: {len(remaining_unmatched_df):,}")
+print(f"{'='*70}")
