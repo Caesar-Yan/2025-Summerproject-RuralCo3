@@ -5,7 +5,7 @@ This script works BACKWARDS from the historical target revenue ($1.043M) to dete
 what the November baseline late payment rate should be, then applies seasonal adjustments
 to reconstruct a more accurate revenue estimate.
 
-FAST VERSION: Uses vectorized calculations instead of row-by-row iteration
+CORRECTED: Uses DISCOUNTED price for interest calculation (customers get discount, then pay interest on that amount)
 
 Inputs:
 - ats_grouped_transformed_with_discounts.csv
@@ -65,6 +65,7 @@ print("REVERSE CALIBRATION: FINDING BASELINE FROM TARGET REVENUE")
 print("="*70)
 print(f"Target Revenue: ${TARGET_REVENUE:,.2f}")
 print(f"Approach: Work backwards to find November baseline late rate")
+print(f"USING DISCOUNTED PRICE for interest calculation")
 
 # ================================================================
 # Load data
@@ -141,6 +142,7 @@ print(f"Loaded {n_deciles} deciles")
 
 # Map to deciles
 fy2025_df = fy2025_df.sort_values('total_undiscounted_price').reset_index(drop=True)
+
 fy2025_df['decile'] = pd.qcut(
     fy2025_df['total_undiscounted_price'], 
     q=n_deciles, 
@@ -149,28 +151,37 @@ fy2025_df['decile'] = pd.qcut(
 )
 
 # ================================================================
-# PRE-COMPUTE all static values for VECTORIZED calculation
+# Calculate seasonal adjustment factors
 # ================================================================
 print("\n" + "="*70)
-print("PRE-COMPUTING STATIC VALUES")
+print("CALCULATING SEASONAL ADJUSTMENT FACTORS")
 print("="*70)
 
-# Create year-month column for fast lookup
-fy2025_df['year_month'] = list(zip(fy2025_df['invoice_period'].dt.year, 
-                                     fy2025_df['invoice_period'].dt.month))
-
-# Calculate seasonal adjustment factors
 seasonal_adjustment_factors = {}
+
 for _, row in seasonal_rates.iterrows():
     year_month = (row['invoice_period'].year, row['invoice_period'].month)
     month_rate = row['reconstructed_late_rate_pct'] / 100
     adjustment_factor = month_rate / november_reconstructed_rate
     seasonal_adjustment_factors[year_month] = adjustment_factor
 
-# Map seasonal factors to each invoice
+print(f"Calculated {len(seasonal_adjustment_factors)} monthly adjustment factors")
+
+# ================================================================
+# PRE-COMPUTE all static values for VECTORIZED calculation
+# ================================================================
+print("\n" + "="*70)
+print("PRE-COMPUTING STATIC VALUES")
+print("="*70)
+
+# Create year-month column
+fy2025_df['year_month'] = list(zip(fy2025_df['invoice_period'].dt.year, 
+                                     fy2025_df['invoice_period'].dt.month))
+
+# Map seasonal factors
 fy2025_df['seasonal_factor'] = fy2025_df['year_month'].map(seasonal_adjustment_factors).fillna(1.0)
 
-# Get decile base rates from profile (these are from 2% snapshot)
+# Get decile base rates from profile
 decile_snapshot_rates = {}
 for i in range(n_deciles):
     decile_key = f'decile_{i}'
@@ -200,12 +211,21 @@ fy2025_df['expected_days_overdue'] = fy2025_df['decile'].map(decile_expected_day
 
 print(f"✓ Pre-computed values for {len(fy2025_df):,} invoices")
 
+# Show summary of what we're using
+print(f"\nPricing summary:")
+print(f"  Total undiscounted value: ${fy2025_df['total_undiscounted_price'].sum():,.2f}")
+print(f"  Total discounted value: ${fy2025_df['total_discounted_price'].sum():,.2f}")
+print(f"  Total discount amount: ${fy2025_df['discount_amount'].sum():,.2f}")
+print(f"\n  Using DISCOUNTED price for interest calculation")
+
 # ================================================================
-# VECTORIZED revenue calculation
+# VECTORIZED revenue calculation (WITH DISCOUNT scenario)
 # ================================================================
 def calculate_expected_revenue_vectorized(november_baseline_rate):
     """
     FAST vectorized calculation of expected revenue
+    
+    CORRECTED: Uses DISCOUNTED price for principal (interest charged on discounted amount)
     """
     # Scaling factor from 2% snapshot to new baseline
     old_baseline = 0.02
@@ -214,22 +234,25 @@ def calculate_expected_revenue_vectorized(november_baseline_rate):
     # Calculate adjusted late rate for each invoice (VECTORIZED)
     scaled_base_rate = fy2025_df['decile_snapshot_rate'] * scaling_factor
     adjusted_late_rate = scaled_base_rate * fy2025_df['seasonal_factor']
-    adjusted_late_rate = np.minimum(adjusted_late_rate, 1.0)  # Cap at 100%
+    adjusted_late_rate = np.minimum(adjusted_late_rate, 1.0)
     
-    # Calculate expected interest (VECTORIZED)
+    # Calculate expected interest using DISCOUNTED price (VECTORIZED)
     daily_rate = ANNUAL_INTEREST_RATE / 365
     expected_interest = (
         adjusted_late_rate * 
-        fy2025_df['total_undiscounted_price'] * 
+        fy2025_df['total_discounted_price'] *  # CORRECTED: Use discounted price
         daily_rate * 
         fy2025_df['expected_days_overdue']
     )
     
     # Calculate expected retained discounts (VECTORIZED)
-    expected_retained = adjusted_late_rate * fy2025_df['discount_amount']
+    # Note: In "with discount" scenario, there are NO retained discounts
+    # Customers get discount whether they pay on time or late
+    # We only charge interest on late payments
+    expected_retained = 0  # No retained discounts in "with discount" scenario
     
-    # Total revenue
-    total_revenue = (expected_interest + expected_retained).sum()
+    # Total revenue (interest only, no retained discounts)
+    total_revenue = expected_interest.sum()
     
     return total_revenue
 
@@ -280,10 +303,10 @@ def objective_function(baseline_rate):
     revenue = calculate_expected_revenue_vectorized(baseline_rate)
     return abs(revenue - TARGET_REVENUE)
 
-# Optimize with tight tolerance
+# Optimize
 print("Running optimization...")
 start = time.time()
-result = minimize_scalar(objective_function, bounds=(0.01, 0.50), method='bounded', 
+result = minimize_scalar(objective_function, bounds=(0.01, 0.99), method='bounded', 
                         options={'xatol': 1e-6})
 elapsed = time.time() - start
 
@@ -354,7 +377,9 @@ calibration_summary = pd.DataFrame([{
     'FY2025_start': FY2025_START,
     'FY2025_end': FY2025_END,
     'n_invoices': len(fy2025_df),
-    'total_invoice_value': fy2025_df['total_undiscounted_price'].sum()
+    'total_invoice_value_undiscounted': fy2025_df['total_undiscounted_price'].sum(),
+    'total_invoice_value_discounted': fy2025_df['total_discounted_price'].sum(),
+    'calibration_uses_discounted_price': True
 }])
 
 calibration_file = os.path.join(OUTPUT_DIR, '10.6_calibrated_baseline_late_rate.csv')
@@ -370,7 +395,7 @@ print("="*70)
 
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
 
-# Plot 1: Revenue vs Baseline Rate (using test results for speed)
+# Plot 1: Revenue vs Baseline Rate
 baseline_range = [r['baseline'] for r in test_results]
 revenue_curve = [r['revenue'] for r in test_results]
 
@@ -386,7 +411,8 @@ ax1.axvline(x=old_baseline_snapshot * 100, color='orange', linestyle=':', linewi
 ax1.scatter([calibrated_baseline * 100], [calibrated_revenue], s=200, color='green', 
            zorder=5, edgecolor='black', linewidth=2)
 
-ax1.set_title('Revenue vs November Baseline Late Rate', fontsize=14, fontweight='bold')
+ax1.set_title('Revenue vs November Baseline Late Rate\n(Using Discounted Price)', 
+             fontsize=14, fontweight='bold')
 ax1.set_xlabel('November Baseline Late Rate (%)', fontsize=12)
 ax1.set_ylabel('Expected Revenue ($)', fontsize=12)
 ax1.legend(fontsize=10)
@@ -447,6 +473,13 @@ BASELINE RATES:
   Calibrated (November): {calibrated_baseline*100:.2f}%
   Scaling Factor: {scaling_factor:.2f}x
 
+PRICING USED:
+  Interest charged on: DISCOUNTED price
+  Total discounted value: ${fy2025_df['total_discounted_price'].sum():,.0f}
+  
+  (Customers get discount, then pay
+   interest on the discounted amount)
+
 INTERPRETATION:
   Your 2% snapshot rate was too low
   True November baseline: ~{calibrated_baseline*100:.1f}%
@@ -463,10 +496,7 @@ SEASONAL RANGE:
 
 FY2025 DATA:
   Total invoices: {len(fy2025_df):,}
-  Total value: ${fy2025_df['total_undiscounted_price'].sum():,.0f}
-
-COMPUTATION:
-  Optimization time: {elapsed:.2f}s
+  Discounted value: ${fy2025_df['total_discounted_price'].sum():,.0f}
 """
 
 ax4.text(0.1, 0.9, summary_text, transform=ax4.transAxes, fontsize=11,
@@ -485,10 +515,13 @@ print("="*70)
 print(f"\nKey Finding:")
 print(f"  Your November baseline should be {calibrated_baseline*100:.1f}%, not 2%")
 print(f"  This is {scaling_factor:.1f}x higher than the snapshot rate")
+print(f"\nPricing Note:")
+print(f"  Calibration uses DISCOUNTED price for interest calculation")
+print(f"  (Customers get discount, interest charged on discounted amount)")
 print(f"\nNext Steps:")
-print(f"  1. Use {calibrated_baseline*100:.1f}% as your November baseline in 10.5")
+print(f"  1. Use {calibrated_baseline*100:.1f}% as your November baseline")
 print(f"  2. Apply seasonal adjustments to this calibrated rate")
-print(f"  3. Re-run simulation with calibrated decile rates")
+print(f"  3. Re-run simulation (10.7) with calibrated decile rates")
 print(f"\nFiles created:")
 print(f"  - 10.6_calibrated_baseline_late_rate.csv")
 print(f"  - 10.6_calibration_analysis.png")
