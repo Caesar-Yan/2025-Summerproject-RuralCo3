@@ -14,6 +14,10 @@ outputs:
 - monthly_discounted_Period_3_FY2025.png
 - monthly_discounted_Period_4_Entire.png
 - period_comparison_summary.csv
+- monthly_totals_Period_1_2023-2024.csv
+- monthly_totals_Period_2_2024-2025.csv
+- monthly_totals_Period_3_FY2025.csv
+- monthly_totals_Period_4_Entire.csv
 
 '''
 
@@ -214,6 +218,10 @@ for period in PERIODS:
     monthly_data = create_period_plot(combined_df, period, save_path)
     if monthly_data is not None:
         all_monthly_data[period['name']] = monthly_data
+        # Save to CSV
+        csv_path = visualisations_dir / f"monthly_totals_{period['name']}.csv"
+        monthly_data.to_csv(csv_path, index=False)
+        print(f"  ✓ Saved monthly data CSV: {csv_path.name}")
 
 # ================================================================
 # Create plot for ENTIRE period (2023-12-01 to 2025-12-31)
@@ -233,6 +241,10 @@ save_path_entire = visualisations_dir / f"monthly_discounted_{entire_period_info
 entire_monthly_data = create_period_plot(combined_df, entire_period_info, save_path_entire)
 if entire_monthly_data is not None:
     all_monthly_data[entire_period_info['name']] = entire_monthly_data
+    # Save to CSV
+    csv_path = visualisations_dir / f"monthly_totals_{entire_period_info['name']}.csv"
+    entire_monthly_data.to_csv(csv_path, index=False)
+    print(f"  ✓ Saved monthly data CSV: {csv_path.name}")
 
 # ================================================================
 # Create comparison summary
@@ -266,5 +278,6 @@ print("="*70)
 print("\nFiles created:")
 for i, period in enumerate(PERIODS + [entire_period_info], 1):
     print(f"  {i}. monthly_discounted_{period['name']}.png")
+    print(f"     monthly_totals_{period['name']}.csv")
 print(f"  {len(PERIODS)+2}. period_comparison_summary.csv")
 print("="*70)
