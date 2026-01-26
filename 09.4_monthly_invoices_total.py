@@ -1,24 +1,33 @@
 '''
-Docstring for 09.4_monthly_invoices_total
+09.4_monthly_invoices_total - Monthly Invoice Totals Analysis
 
-this script generates monthly totals for different periods, and gives statistics for invoice data
+This script generates monthly totals for different time periods and provides
+statistical analysis of invoice data across multiple date ranges.
 
+Inputs:
+-------
+- data_cleaning/ats_grouped_transformed_with_discounts.csv
+- data_cleaning/invoice_grouped_transformed_with_discounts.csv
 
-inputs:
-- ats_grouped_transformed_with_discounts.csv
-- invoice_grouped_transformed_with_discounts.csv
-
-outputs:
+Outputs:
+--------
+Visualizations (visualisations/):
 - monthly_discounted_Period_1_2023-2024.png
 - monthly_discounted_Period_2_2024-2025.png
 - monthly_discounted_Period_3_FY2025.png
 - monthly_discounted_Period_4_Entire.png
-- period_comparison_summary.csv
+
+CSV Files (visualisations/):
 - monthly_totals_Period_1_2023-2024.csv
 - monthly_totals_Period_2_2024-2025.csv
 - monthly_totals_Period_3_FY2025.csv
 - monthly_totals_Period_4_Entire.csv
 
+Summary (payment_profile/):
+- 9.4_period_comparison_summary.csv
+
+Author: Chris & Team
+Date: January 2026
 '''
 
 import pandas as pd
@@ -65,20 +74,20 @@ print(f"After filtering negatives: {len(combined_df):,}")
 PERIODS = [
     {
         'name': 'Period_1_2023-2024',
-        'start': pd.Timestamp("2023-12-20"),
-        'end': pd.Timestamp("2024-12-20"),
-        'title': 'Monthly Total Discounted Price\n2023-12-20 to 2024-12-20'
+        'start': pd.Timestamp("2024-02-01"),
+        'end': pd.Timestamp("2024-12-31"),
+        'title': 'Monthly Total Discounted Price\n2024-02-01 to 2024-12-31'
     },
     {
         'name': 'Period_2_2024-2025',
-        'start': pd.Timestamp("2024-12-21"),
-        'end': pd.Timestamp("2025-12-20"),
-        'title': 'Monthly Total Discounted Price\n2024-12-21 to 2025-12-20'
+        'start': pd.Timestamp("2024-12-31"),
+        'end': pd.Timestamp("2025-11-01"),
+        'title': 'Monthly Total Discounted Price\n2024-12-31 to 2025-11-01'
     },
     {
         'name': 'Period_3_FY2025',
-        'start': pd.Timestamp("2024-06-30"),
-        'end': pd.Timestamp("2025-07-01"),
+        'start': pd.Timestamp("2024-07-01"),
+        'end': pd.Timestamp("2025-06-30"),
         'title': 'Monthly Total Discounted Price\nFY2025 (2024-06-30 to 2025-07-01)'
     }
 ]
@@ -147,6 +156,11 @@ def create_period_plot(df, period_info, save_path):
     monthly_totals['invoice_period'] = monthly_totals['invoice_period'].dt.to_timestamp()
     monthly_totals['n_invoices'] = period_df.groupby(period_df['invoice_period'].dt.to_period('M')).size().values
     
+    # Add undiscounted_as_pct column
+    monthly_totals['undiscounted_as_pct'] = (
+        monthly_totals['total_undiscounted_price'] / monthly_totals['total_discounted_price'] * 100
+    ).where(monthly_totals['total_discounted_price'] > 0, 0)
+    
     print(f"  Months with data: {len(monthly_totals)}")
     print(f"  Total discounted: ${monthly_totals['total_discounted_price'].sum():,.2f}")
     
@@ -214,12 +228,12 @@ print("="*70)
 all_monthly_data = {}
 
 for period in PERIODS:
-    save_path = visualisations_dir / f"monthly_discounted_{period['name']}.png"
+    save_path = visualisations_dir / f"9.4_monthly_discounted_{period['name']}.png"
     monthly_data = create_period_plot(combined_df, period, save_path)
     if monthly_data is not None:
         all_monthly_data[period['name']] = monthly_data
         # Save to CSV
-        csv_path = visualisations_dir / f"monthly_totals_{period['name']}.csv"
+        csv_path = visualisations_dir / f"9.4_monthly_totals_{period['name']}.csv"
         monthly_data.to_csv(csv_path, index=False)
         print(f"  ✓ Saved monthly data CSV: {csv_path.name}")
 
@@ -227,22 +241,22 @@ for period in PERIODS:
 # Create plot for ENTIRE period (2023-12-01 to 2025-12-31)
 # ================================================================
 print("\n" + "="*70)
-print("CREATING PLOT FOR ENTIRE PERIOD (2023-12-01 to 2025-12-31)")
+print("CREATING PLOT FOR ENTIRE PERIOD (2024-02-01 to 2025-11-01)")
 print("="*70)
 
 entire_period_info = {
     'name': 'Period_4_Entire',
-    'start': pd.Timestamp("2023-12-01"),
-    'end': pd.Timestamp("2025-12-31"),
-    'title': 'Monthly Total Discounted Price\nEntire Period (2023-12-01 to 2025-12-31)'
+    'start': pd.Timestamp("2024-2-01"),
+    'end': pd.Timestamp("2025-11-01"),
+    'title': 'Monthly Total Discounted Price\nEntire Period (2024-02-01 to 2025-11-01)'
 }
 
-save_path_entire = visualisations_dir / f"monthly_discounted_{entire_period_info['name']}.png"
+save_path_entire = visualisations_dir / f"9.4_monthly_discounted_{entire_period_info['name']}.png"
 entire_monthly_data = create_period_plot(combined_df, entire_period_info, save_path_entire)
 if entire_monthly_data is not None:
     all_monthly_data[entire_period_info['name']] = entire_monthly_data
     # Save to CSV
-    csv_path = visualisations_dir / f"monthly_totals_{entire_period_info['name']}.csv"
+    csv_path = visualisations_dir / f"9.4_monthly_totals_{entire_period_info['name']}.csv"
     entire_monthly_data.to_csv(csv_path, index=False)
     print(f"  ✓ Saved monthly data CSV: {csv_path.name}")
 
@@ -256,28 +270,23 @@ print("="*70)
 summary_data = []
 
 for period_name, monthly_df in all_monthly_data.items():
+    total_discounted = monthly_df['total_discounted_price'].sum()
+    total_undiscounted = monthly_df['total_undiscounted_price'].sum()
+    total_discount_amount = monthly_df['discount_amount'].sum()
+    
     summary_data.append({
         'Period': period_name,
-        'Total_Discounted': monthly_df['total_discounted_price'].sum(),
-        'Total_Undiscounted': monthly_df['total_undiscounted_price'].sum(),
-        'Total_Discount_Amount': monthly_df['discount_amount'].sum(),
+        'Total_Discounted': total_discounted,
+        'Total_Undiscounted': total_undiscounted,
+        'Total_Discount_Amount': total_discount_amount,
         'Total_Invoices': monthly_df['n_invoices'].sum(),
-        'Num_Months': len(monthly_df)
+        'Num_Months': len(monthly_df),
+        'Undiscounted_as_Pct': (total_undiscounted / total_discounted * 100) if total_discounted > 0 else 0
     })
 
 summary_df = pd.DataFrame(summary_data)
 print("\n", summary_df.to_string(index=False))
 
 # Save summary
-summary_df.to_csv(profile_dir / '9.4_period_comparison_summary.csv', index=False)
+summary_df.to_csv(visualisations_dir / '9.4_period_comparison_summary.csv', index=False)
 print(f"\n✓ Saved summary to: period_comparison_summary.csv")
-
-print("\n" + "="*70)
-print("ALL VISUALIZATIONS COMPLETE")
-print("="*70)
-print("\nFiles created:")
-for i, period in enumerate(PERIODS + [entire_period_info], 1):
-    print(f"  {i}. monthly_discounted_{period['name']}.png")
-    print(f"     monthly_totals_{period['name']}.csv")
-print(f"  {len(PERIODS)+2}. period_comparison_summary.csv")
-print("="*70)

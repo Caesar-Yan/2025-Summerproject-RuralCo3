@@ -10,6 +10,17 @@ This script:
 4. Forecasts next 12 months of invoice totals
 5. Saves forecast to CSV/Excel for use in revenue estimation
 
+Inputs:
+-------
+- ats_grouped_transformed_with_discounts.csv (historical ATS invoices)
+- invoice_grouped_transformed_with_discounts.csv (historical invoice invoices)
+
+Outputs:
+--------
+- visualisations/11_invoice_forecast_12_months.csv (monthly forecast data)
+- visualisations/11_invoice_forecast_with_historical.xlsx (forecast + historical + model info)
+- visualisations/11_invoice_forecast_visualization.png (4-panel visualization)
+
 Author: Chris & Team
 Date: January 2026
 """
@@ -18,6 +29,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score, mean_absolute_error
@@ -25,23 +37,66 @@ import os
 import warnings
 warnings.filterwarnings('ignore')
 
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(SCRIPT_DIR)
-print(f"Working directory set to: {os.getcwd()}")
+# ========================
+# PATH CONFIGURATION
+# ========================
+# IMPORTANT: Update BASE_PATH to match your project location
+# Example Windows: r"C:\Users\YourName\Projects\RuralCo3"
+# Example Mac/Linux: "/Users/yourname/Projects/RuralCo3"
+
+BASE_PATH = r"T:\projects\2025\RuralCo\Data provided by RuralCo 20251202\RuralCo3"
+
+# Input and output paths (derived from BASE_PATH)
+INPUT_ATS = os.path.join(BASE_PATH, "data_cleaning", "ats_grouped_transformed_with_discounts.csv")
+INPUT_INVOICE = os.path.join(BASE_PATH, "data_cleaning", "invoice_grouped_transformed_with_discounts.csv")
+OUTPUT_PATH = os.path.join(BASE_PATH, "visualisations")
+
+# Create output directory if it doesn't exist
+os.makedirs(OUTPUT_PATH, exist_ok=True)
+
+# ========================
+# DISPLAY PATH INFO
+# ========================
+print("\n" + "="*80)
+print("PATH CONFIGURATION")
+print("="*80)
+print(f"Base Directory: {BASE_PATH}")
+print(f"Input Files:")
+print(f"  - {os.path.basename(INPUT_ATS)}")
+print(f"  - {os.path.basename(INPUT_INVOICE)}")
+print(f"Output Folder: {OUTPUT_PATH}")
+print("="*80)
+
+# Check if input files exist
+if not os.path.exists(INPUT_ATS):
+    print(f"\n❌ ERROR: ATS input file not found!")
+    print(f"   Expected: {INPUT_ATS}")
+    print(f"\n   Please update BASE_PATH in the script to match your project location.")
+    exit(1)
+
+if not os.path.exists(INPUT_INVOICE):
+    print(f"\n❌ ERROR: Invoice input file not found!")
+    print(f"   Expected: {INPUT_INVOICE}")
+    print(f"\n   Please update BASE_PATH in the script to match your project location.")
+    exit(1)
+
+# ========================
+# PLOTTING CONFIGURATION
+# ========================
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set_palette("husl")
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial']
+plt.rcParams['axes.unicode_minus'] = False
 
 # ================================================================
 # CONFIGURATION
 # ================================================================
-OUTPUT_DIR = "invoice_forecast_outputs"
 FORECAST_MONTHS = 12  # Forecast next 12 months
 HISTORICAL_CUTOFF_DATE = pd.Timestamp("2023-12-01")  # Only use data from this date onwards
 HISTORICAL_END_DATE = pd.Timestamp("2025-11-30")  # Last date to use (exclude incomplete months)
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-print("="*80)
-print("INVOICE TOTAL FORECAST - NEXT 12 MONTHS")
+print("\n" + "="*80)
+print("🚀 INVOICE TOTAL FORECAST - NEXT 12 MONTHS")
 print("="*80)
 print(f"Using historical data from {HISTORICAL_CUTOFF_DATE.strftime('%Y-%m-%d')} to {HISTORICAL_END_DATE.strftime('%Y-%m-%d')}")
 
@@ -49,17 +104,20 @@ print(f"Using historical data from {HISTORICAL_CUTOFF_DATE.strftime('%Y-%m-%d')}
 # STEP 1: Load historical invoice data
 # ================================================================
 print("\n" + "="*80)
-print("STEP 1: LOADING HISTORICAL INVOICE DATA")
+print("📁 [Step 1/6] LOADING HISTORICAL INVOICE DATA")
 print("="*80)
 
-ats_grouped = pd.read_csv('ats_grouped_transformed_with_discounts.csv')
-invoice_grouped = pd.read_csv('invoice_grouped_transformed_with_discounts.csv')
-
+print(f"  Reading ATS data: {os.path.basename(INPUT_ATS)}")
+ats_grouped = pd.read_csv(INPUT_ATS)
 ats_grouped['customer_type'] = 'ATS'
+
+print(f"  Reading Invoice data: {os.path.basename(INPUT_INVOICE)}")
+invoice_grouped = pd.read_csv(INPUT_INVOICE)
 invoice_grouped['customer_type'] = 'Invoice'
+
 combined_df = pd.concat([ats_grouped, invoice_grouped], ignore_index=True)
 
-print(f"Total historical invoices: {len(combined_df):,}")
+print(f"  ✓ Total historical invoices loaded: {len(combined_df):,}")
 
 # Parse dates
 def parse_invoice_period(series: pd.Series) -> pd.Series:
@@ -88,30 +146,30 @@ initial_count = len(combined_df)
 combined_df = combined_df[combined_df['total_undiscounted_price'] >= 0].copy()
 filtered_negatives = initial_count - len(combined_df)
 if filtered_negatives > 0:
-    print(f"⚠ Filtered out {filtered_negatives:,} invoices with negative prices")
+    print(f"  ⚠ Filtered out {filtered_negatives:,} invoices with negative prices")
 
 # Filter to December 2023 onwards
 initial_count = len(combined_df)
 combined_df = combined_df[combined_df['invoice_period'] >= HISTORICAL_CUTOFF_DATE].copy()
 filtered_old = initial_count - len(combined_df)
 if filtered_old > 0:
-    print(f"⚠ Filtered out {filtered_old:,} invoices before {HISTORICAL_CUTOFF_DATE.strftime('%B %Y')}")
+    print(f"  ⚠ Filtered out {filtered_old:,} invoices before {HISTORICAL_CUTOFF_DATE.strftime('%B %Y')}")
 
 # Filter to November 2025 and earlier (exclude incomplete months)
 initial_count = len(combined_df)
 combined_df = combined_df[combined_df['invoice_period'] <= HISTORICAL_END_DATE].copy()
 filtered_recent = initial_count - len(combined_df)
 if filtered_recent > 0:
-    print(f"⚠ Filtered out {filtered_recent:,} invoices after {HISTORICAL_END_DATE.strftime('%B %Y')} (incomplete data)")
+    print(f"  ⚠ Filtered out {filtered_recent:,} invoices after {HISTORICAL_END_DATE.strftime('%B %Y')} (incomplete data)")
 
-print(f"\nValid invoices for analysis: {len(combined_df):,}")
-print(f"Date range: {combined_df['invoice_period'].min().strftime('%Y-%m')} to {combined_df['invoice_period'].max().strftime('%Y-%m')}")
+print(f"\n  ✓ Valid invoices for analysis: {len(combined_df):,}")
+print(f"  Date range: {combined_df['invoice_period'].min().strftime('%Y-%m')} to {combined_df['invoice_period'].max().strftime('%Y-%m')}")
 
 # ================================================================
 # STEP 2: Aggregate historical monthly data
 # ================================================================
 print("\n" + "="*80)
-print("STEP 2: AGGREGATING HISTORICAL MONTHLY TOTALS")
+print("📊 [Step 2/6] AGGREGATING HISTORICAL MONTHLY TOTALS")
 print("="*80)
 
 monthly_historical = combined_df.groupby(
@@ -128,38 +186,39 @@ monthly_historical.columns = ['period', 'total_undiscounted', 'total_discounted'
 monthly_historical['period'] = monthly_historical['period'].dt.to_timestamp()
 monthly_historical = monthly_historical.sort_values('period').reset_index(drop=True)
 
-print(f"Historical months: {len(monthly_historical)}")
-print(f"First historical month: {monthly_historical['period'].min().strftime('%Y-%m')}")
-print(f"Last historical month: {monthly_historical['period'].max().strftime('%Y-%m')}")
+print(f"  ✓ Historical months: {len(monthly_historical)}")
+print(f"  First historical month: {monthly_historical['period'].min().strftime('%Y-%m')}")
+print(f"  Last historical month: {monthly_historical['period'].max().strftime('%Y-%m')}")
 
 # Display monthly statistics
-print("\nHistorical monthly statistics:")
-print(f"  Avg monthly undiscounted total: ${monthly_historical['total_undiscounted'].mean():,.2f}")
-print(f"  Avg monthly discounted total: ${monthly_historical['total_discounted'].mean():,.2f}")
-print(f"  Avg monthly invoice count: {monthly_historical['invoice_count'].mean():.0f}")
-print(f"  Avg discount rate: {(monthly_historical['total_discount'].sum() / monthly_historical['total_undiscounted'].sum())*100:.2f}%")
+print("\n  📈 Historical monthly statistics:")
+print(f"    Avg monthly undiscounted total: ${monthly_historical['total_undiscounted'].mean():,.2f}")
+print(f"    Avg monthly discounted total: ${monthly_historical['total_discounted'].mean():,.2f}")
+print(f"    Avg monthly invoice count: {monthly_historical['invoice_count'].mean():.0f}")
+print(f"    Avg discount rate: {(monthly_historical['total_discount'].sum() / monthly_historical['total_undiscounted'].sum())*100:.2f}%")
 
 # ================================================================
 # DIAGNOSTIC: Check training data
 # ================================================================
 print("\n" + "="*80)
-print("DIAGNOSTIC: TRAINING DATA INSPECTION")
+print("🔍 DIAGNOSTIC: TRAINING DATA INSPECTION")
 print("="*80)
 
-print("\nMonthly historical data:")
-print(monthly_historical[['period', 'total_undiscounted', 'invoice_count']].to_string())
+print("\n  Monthly historical data:")
+for _, row in monthly_historical.iterrows():
+    print(f"    {row['period'].strftime('%Y-%m')}: ${row['total_undiscounted']:>12,.2f}  ({row['invoice_count']:>4,.0f} invoices)")
 
-print(f"\nData statistics:")
-print(f"  Min undiscounted: ${monthly_historical['total_undiscounted'].min():,.2f}")
-print(f"  Max undiscounted: ${monthly_historical['total_undiscounted'].max():,.2f}")
-print(f"  Mean undiscounted: ${monthly_historical['total_undiscounted'].mean():,.2f}")
-print(f"  Trend: {'Increasing' if monthly_historical['total_undiscounted'].iloc[-1] > monthly_historical['total_undiscounted'].iloc[0] else 'Decreasing'}")
+print(f"\n  Data statistics:")
+print(f"    Min undiscounted: ${monthly_historical['total_undiscounted'].min():,.2f}")
+print(f"    Max undiscounted: ${monthly_historical['total_undiscounted'].max():,.2f}")
+print(f"    Mean undiscounted: ${monthly_historical['total_undiscounted'].mean():,.2f}")
+print(f"    Trend: {'Increasing' if monthly_historical['total_undiscounted'].iloc[-1] > monthly_historical['total_undiscounted'].iloc[0] else 'Decreasing'}")
 
 # ================================================================
 # STEP 3: Build regression models to predict invoice totals
 # ================================================================
 print("\n" + "="*80)
-print("STEP 3: BUILDING REGRESSION MODELS FOR INVOICE TOTALS")
+print("🔧 [Step 3/6] BUILDING REGRESSION MODELS FOR INVOICE TOTALS")
 print("="*80)
 
 # Add time features
@@ -172,28 +231,28 @@ monthly_2025 = monthly_historical[monthly_historical['year'] >= 2025].copy()
 if len(monthly_2025) > 0:
     monthly_2025['month_index_2025'] = range(len(monthly_2025))
 
-print(f"\nData split:")
-print(f"  All data: {len(monthly_historical)} months ({monthly_historical['period'].min().strftime('%Y-%m')} to {monthly_historical['period'].max().strftime('%Y-%m')})")
-print(f"  2025+ data: {len(monthly_2025)} months")
+print(f"\n  Data split:")
+print(f"    All data: {len(monthly_historical)} months ({monthly_historical['period'].min().strftime('%Y-%m')} to {monthly_historical['period'].max().strftime('%Y-%m')})")
+print(f"    2025+ data: {len(monthly_2025)} months")
 
 # Prepare training data
 X_all = monthly_historical[['month_index']].values
 y_all_undiscounted = monthly_historical['total_undiscounted'].values
 
 # Train models for undiscounted amounts
-print("\n--- Training Linear Regression (All Data) ---")
+print("\n  [1/3] Training Linear Regression (All Data)...")
 model_linear_all = LinearRegression()
 model_linear_all.fit(X_all, y_all_undiscounted)
 pred_linear_all = model_linear_all.predict(X_all)
 r2_linear_all = r2_score(y_all_undiscounted, pred_linear_all)
 mae_linear_all = mean_absolute_error(y_all_undiscounted, pred_linear_all)
-print(f"R² Score: {r2_linear_all:.4f}")
-print(f"MAE: ${mae_linear_all:,.2f}")
-print(f"Slope: ${model_linear_all.coef_[0]:,.2f}/month")
-print(f"Intercept: ${model_linear_all.intercept_:,.2f}")
+print(f"    R² Score: {r2_linear_all:.4f}")
+print(f"    MAE: ${mae_linear_all:,.2f}")
+print(f"    Slope: ${model_linear_all.coef_[0]:,.2f}/month")
+print(f"    Intercept: ${model_linear_all.intercept_:,.2f}")
 
 # Train polynomial model
-print("\n--- Training Polynomial Regression (degree=2) ---")
+print("\n  [2/3] Training Polynomial Regression (degree=2)...")
 poly_features = PolynomialFeatures(degree=2)
 X_poly_all = poly_features.fit_transform(X_all)
 model_poly_all = LinearRegression()
@@ -201,13 +260,13 @@ model_poly_all.fit(X_poly_all, y_all_undiscounted)
 pred_poly_all = model_poly_all.predict(X_poly_all)
 r2_poly_all = r2_score(y_all_undiscounted, pred_poly_all)
 mae_poly_all = mean_absolute_error(y_all_undiscounted, pred_poly_all)
-print(f"R² Score: {r2_poly_all:.4f}")
-print(f"MAE: ${mae_poly_all:,.2f}")
+print(f"    R² Score: {r2_poly_all:.4f}")
+print(f"    MAE: ${mae_poly_all:,.2f}")
 
 # Train 2025+ model if enough data
 use_2025_model = False
 if len(monthly_2025) >= 3:
-    print("\n--- Training Linear Regression (2025+ Only) ---")
+    print("\n  [3/3] Training Linear Regression (2025+ Only)...")
     X_2025 = monthly_2025[['month_index_2025']].values
     y_2025_undiscounted = monthly_2025['total_undiscounted'].values
     
@@ -216,13 +275,13 @@ if len(monthly_2025) >= 3:
     pred_linear_2025 = model_linear_2025.predict(X_2025)
     r2_linear_2025 = r2_score(y_2025_undiscounted, pred_linear_2025)
     mae_linear_2025 = mean_absolute_error(y_2025_undiscounted, pred_linear_2025)
-    print(f"R² Score: {r2_linear_2025:.4f}")
-    print(f"MAE: ${mae_linear_2025:,.2f}")
-    print(f"Slope: ${model_linear_2025.coef_[0]:,.2f}/month")
-    print(f"Intercept: ${model_linear_2025.intercept_:,.2f}")
+    print(f"    R² Score: {r2_linear_2025:.4f}")
+    print(f"    MAE: ${mae_linear_2025:,.2f}")
+    print(f"    Slope: ${model_linear_2025.coef_[0]:,.2f}/month")
+    print(f"    Intercept: ${model_linear_2025.intercept_:,.2f}")
     use_2025_model = True
 else:
-    print("\n⚠ Not enough 2025 data for separate model")
+    print("\n  [3/3] ⚠ Not enough 2025 data for separate model")
     r2_linear_2025 = -np.inf  # Ensure it won't be selected
 
 # Select best model based on R² score
@@ -236,13 +295,13 @@ model_scores = {
 best_model_name = max(model_scores.keys(), key=lambda k: model_scores[k][0])
 best_r2, best_model, is_2025_model, model_type = model_scores[best_model_name]
 
-print(f"\n✓ Selected Best Model: {best_model_name} (R²={best_r2:.4f})")
+print(f"\n  ✓ Selected Best Model: {best_model_name} (R²={best_r2:.4f})")
 
 # ================================================================
 # STEP 4: Forecast future invoice totals
 # ================================================================
 print("\n" + "="*80)
-print("STEP 4: FORECASTING FUTURE INVOICE TOTALS (NEXT 12 MONTHS)")
+print("🔮 [Step 4/6] FORECASTING FUTURE INVOICE TOTALS (NEXT 12 MONTHS)")
 print("="*80)
 
 last_month_index = monthly_historical['month_index'].max()
@@ -277,7 +336,7 @@ forecast_undiscounted = np.maximum(forecast_undiscounted, 0)
 # Calculate average discount rate from historical data
 avg_discount_rate = (monthly_historical['total_discount'].sum() / 
                      monthly_historical['total_undiscounted'].sum())
-print(f"\nHistorical average discount rate: {avg_discount_rate*100:.2f}%")
+print(f"\n  Historical average discount rate: {avg_discount_rate*100:.2f}%")
 
 # Calculate discounted amounts
 forecast_discounted = forecast_undiscounted * (1 - avg_discount_rate)
@@ -287,7 +346,7 @@ forecast_discount = forecast_undiscounted - forecast_discounted
 recent_avg_count = monthly_historical.tail(6)['invoice_count'].mean()
 forecast_invoice_count = np.full(FORECAST_MONTHS, recent_avg_count)
 
-print(f"Using recent 6-month average invoice count: {recent_avg_count:.0f} invoices/month")
+print(f"  Using recent 6-month average invoice count: {recent_avg_count:.0f} invoices/month")
 
 # Create forecast dataframe
 forecast_df = pd.DataFrame({
@@ -298,29 +357,30 @@ forecast_df = pd.DataFrame({
     'forecast_invoice_count': forecast_invoice_count.astype(int)
 })
 
-print("\nForecasted Monthly Invoice Totals:")
-print(forecast_df.to_string(index=False))
+print("\n  Forecasted Monthly Invoice Totals:")
+for _, row in forecast_df.iterrows():
+    print(f"    {row['period'].strftime('%Y-%m')}: ${row['forecast_undiscounted']:>12,.2f} (undiscounted), ${row['forecast_discounted']:>12,.2f} (discounted)")
 
-print(f"\nTotal Forecasted (12 months):")
-print(f"  Undiscounted: ${forecast_df['forecast_undiscounted'].sum():,.2f}")
-print(f"  Discounted: ${forecast_df['forecast_discounted'].sum():,.2f}")
-print(f"  Total discount: ${forecast_df['forecast_discount'].sum():,.2f}")
-print(f"  Total invoices: {forecast_df['forecast_invoice_count'].sum():,}")
+print(f"\n  💰 Total Forecasted (12 months):")
+print(f"    Undiscounted: ${forecast_df['forecast_undiscounted'].sum():,.2f}")
+print(f"    Discounted: ${forecast_df['forecast_discounted'].sum():,.2f}")
+print(f"    Total discount: ${forecast_df['forecast_discount'].sum():,.2f}")
+print(f"    Total invoices: {forecast_df['forecast_invoice_count'].sum():,}")
 
 # ================================================================
 # STEP 5: Save forecast results
 # ================================================================
 print("\n" + "="*80)
-print("STEP 5: SAVING FORECAST RESULTS")
+print("💾 [Step 5/6] SAVING FORECAST RESULTS")
 print("="*80)
 
 # Save detailed forecast
-output_csv = os.path.join(OUTPUT_DIR, 'invoice_forecast_12_months.csv')
+output_csv = os.path.join(OUTPUT_PATH, '11_invoice_forecast_12_months.csv')
 forecast_df.to_csv(output_csv, index=False)
-print(f"✓ Saved: {output_csv}")
+print(f"  ✓ Saved: {output_csv}")
 
 # Save with historical data for context
-output_excel = os.path.join(OUTPUT_DIR, 'invoice_forecast_with_historical.xlsx')
+output_excel = os.path.join(OUTPUT_PATH, '11_invoice_forecast_with_historical.xlsx')
 with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
     forecast_df.to_excel(writer, sheet_name='Forecast', index=False)
     monthly_historical.to_excel(writer, sheet_name='Historical', index=False)
@@ -337,13 +397,13 @@ with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
     })
     model_info.to_excel(writer, sheet_name='Model_Info', index=False)
 
-print(f"✓ Saved: {output_excel}")
+print(f"  ✓ Saved: {output_excel}")
 
 # ================================================================
 # STEP 6: Create visualizations
 # ================================================================
 print("\n" + "="*80)
-print("STEP 6: CREATING VISUALIZATIONS")
+print("🎨 [Step 6/6] CREATING VISUALIZATIONS")
 print("="*80)
 
 fig, axes = plt.subplots(2, 2, figsize=(18, 12))
@@ -427,34 +487,35 @@ ax4.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 ax4.tick_params(axis='x', rotation=45)
 
 plt.tight_layout()
-output_viz = os.path.join(OUTPUT_DIR, 'invoice_forecast_visualization.png')
+output_viz = os.path.join(OUTPUT_PATH, '11_invoice_forecast_visualization.png')
 plt.savefig(output_viz, dpi=300, bbox_inches='tight')
-print(f"✓ Saved: {output_viz}")
+print(f"  ✓ Saved: {output_viz}")
 plt.close()
 
 # ================================================================
 # FINAL SUMMARY
 # ================================================================
 print("\n" + "="*80)
-print("INVOICE FORECAST COMPLETE!")
+print("✅ INVOICE FORECAST COMPLETE!")
 print("="*80)
 
-print(f"\nModel Details:")
+print(f"\n📊 Model Details:")
 print(f"  Model type: {best_model_name}")
 print(f"  R² Score: {best_r2:.4f}")
 print(f"  Training period: {monthly_historical['period'].min().strftime('%Y-%m')} to {monthly_historical['period'].max().strftime('%Y-%m')}")
 
-print(f"\nForecast Summary:")
+print(f"\n💰 Forecast Summary:")
 print(f"  Forecast period: {forecast_df['period'].min().strftime('%Y-%m')} to {forecast_df['period'].max().strftime('%Y-%m')}")
 print(f"  Total undiscounted: ${forecast_df['forecast_undiscounted'].sum():,.2f}")
 print(f"  Total discounted: ${forecast_df['forecast_discounted'].sum():,.2f}")
 print(f"  Total invoices: {forecast_df['forecast_invoice_count'].sum():,}")
 
-print(f"\nOutputs saved to: {OUTPUT_DIR}/")
-print("Files created:")
-print("  1. invoice_forecast_12_months.csv - Monthly forecast (for use in revenue estimation)")
-print("  2. invoice_forecast_with_historical.xlsx - Complete data with historical context")
-print("  3. invoice_forecast_visualization.png - Visual analysis")
+print(f"\n📁 Output Files:")
+print(f"  • 11_invoice_forecast_12_months.csv - Monthly forecast (for use in revenue estimation)")
+print(f"  • 11_invoice_forecast_with_historical.xlsx - Complete data with historical context")
+print(f"  • 11_invoice_forecast_visualization.png - Visual analysis")
+
+print(f"\n  All files saved to: {OUTPUT_PATH}")
 
 print("\n" + "="*80)
 print("NEXT STEP: Run 12_Estimate_revenue_from_forecast.py to calculate credit card revenue")
