@@ -7,9 +7,3 @@ you will have to make a guess about what the discount is
 
 '''
 
-nexgard spectra - vet mediaction 
-
-writing code to get average discount amount for vets in merchant discount detail File:
-vet1 = 5
-vet2 = 10
-average vet = 8%
