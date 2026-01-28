@@ -69,23 +69,27 @@ print(f"\n{'='*70}")
 print(f"EXTRACTING UNIQUE MATCHED MERCHANTS")
 print(f"{'='*70}")
 
-# Get unique ATS numbers from both columns
-ats_l1 = df['matched_ats_number'].dropna().unique()
-ats_l2 = df['matched_ats_number_L2'].dropna().unique()
+# Get ATS numbers with their match_layer labels from both columns
+# For matched_ats_number (L1 matches)
+ats_l1_df = df[df['matched_ats_number'].notna()][['matched_ats_number', 'match_layer']].copy()
+ats_l1_df.columns = ['matched_ats_number', 'match_layer']
 
-# Combine and get unique values
-all_ats = pd.Series(list(ats_l1) + list(ats_l2)).unique()
+# For matched_ats_number_L2 (L2 matches)
+ats_l2_df = df[df['matched_ats_number_L2'].notna()][['matched_ats_number_L2', 'match_layer']].copy()
+ats_l2_df.columns = ['matched_ats_number', 'match_layer']
 
-print(f"\nUnique ATS numbers from matched_ats_number: {len(ats_l1):,}")
-print(f"Unique ATS numbers from matched_ats_number_L2: {len(ats_l2):,}")
-print(f"Total unique ATS numbers: {len(all_ats):,}")
+# Combine both DataFrames
+all_ats_df = pd.concat([ats_l1_df, ats_l2_df], ignore_index=True)
 
-# Create DataFrame with ATS numbers
-merchants_df = pd.DataFrame({
-    'matched_ats_number': sorted(all_ats)
-})
+# Get unique combinations of ATS number and match_layer
+merchants_df = all_ats_df.drop_duplicates().sort_values('matched_ats_number').reset_index(drop=True)
 
-print(f"\nFirst 20 matched ATS numbers:")
+print(f"\nUnique ATS numbers from matched_ats_number: {df['matched_ats_number'].dropna().nunique():,}")
+print(f"Unique ATS numbers from matched_ats_number_L2: {df['matched_ats_number_L2'].dropna().nunique():,}")
+print(f"Total unique ATS numbers: {merchants_df['matched_ats_number'].nunique():,}")
+print(f"Total unique ATS-match_layer combinations: {len(merchants_df):,}")
+
+print(f"\nFirst 20 matched ATS numbers with their match_layer:")
 print(merchants_df.head(20).to_string(index=False))
 
 # =========================================================

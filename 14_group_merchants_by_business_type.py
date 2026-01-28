@@ -1,23 +1,23 @@
 '''
-Docstring for 14_group_merchants_by_business_type
+Docstring for 14_map_merchants_to_match_layers
 
-This script uses fuzzy matching and keyword clustering to automatically group 
-merchants from the Merchant Discount Detail file into business types.
+This script maps merchants from the Merchant Discount Detail file to specific 
+match_layer labels using keyword matching on Account Name, Discount Offered, 
+and Discount Offered 2 columns.
 
 inputs:
 - Merchant Discount Detail.xlsx
 
 outputs:
-- merchants_grouped_by_business_type.csv: All merchants with assigned business_type
-- business_type_summary.csv: Summary of business types with merchant counts
+- 14_merchants_mapped_to_match_layers.csv: All merchants with assigned match_layer
+- 14_match_layer_summary.csv: Summary of match layers with merchant counts
+- 14_merchants_unmapped.csv: Merchants not mapped to any match layer
 '''
 
 import pandas as pd
 import numpy as np
 import re
 from pathlib import Path
-from fuzzywuzzy import fuzz, process
-from collections import defaultdict
 
 # Set up paths
 data_dir = Path('T:/projects/2025/RuralCo/Data provided by RuralCo 20251202')
@@ -36,194 +36,209 @@ print(f"Loaded {len(merchant_df):,} merchant records")
 print(f"Columns: {merchant_df.columns.tolist()}")
 
 # =========================================================
-# DEFINE BUSINESS TYPE CATEGORIES WITH KEYWORDS
+# DEFINE MATCH LAYER KEYWORDS
 # =========================================================
 
-business_type_keywords = {
-    'Fuel_Stations': [
-        'fuelstop', 'fuel', 'mobil', 'npd', 'bp', 'z energy', 'caltex', 'shell', 
-        'service station', 'petrol', 'petroleum', 'gas station', 'diesel'
+match_layer_keywords = {
+    'L4_diesel_no_merchant': [
+        'diesel', 'automotive diesel', 'agri diesel', 'off road diesel',
+        'farm diesel', 'bulk diesel'
     ],
     
-    'Veterinary': [
-        'vet', 'veterinary', 'animal health', 'vetlife', 'evolution vet', 
-        'vetserve', 'afterhours vet', 'town country vet'
+    'L4_petrol_no_merchant': [
+        'petrol', 'premium petrol', 'unleaded', '91', '95', '98',
+        'automotive petrol', 'pump petrol'
     ],
     
-    'Automotive_Mechanical': [
-        'auto', 'automotive', 'mechanical', 'mechanic', 'motors', 'motor group',
-        'panel', 'tyres', 'tyre', 'repco', 'brake', 'clutch', 'transmission', 
-        'workshop', 'auto electric', 'radiator', 'muffler', 'exhaust'
+    'L5_Gas': [
+        'gas', 'lpg', 'rockgas', 'elgas', 'gas bottle', 'lng', 'cng',
+        'bottled gas', 'natural gas', 'propane', 'butane'
     ],
     
-    'Building_Hardware': [
-        'mitre 10', 'placemakers', 'itm', 'hammer hardware', 'building', 
-        'timber', 'lumber', 'hardware', 'toolshed'
+    'L5_Vet': [
+        'vet', 'veterinary', 'animal health', 'vetlife', 'evolution vet',
+        'vetserve', 'afterhours vet', 'town country vet', 'vet clinic',
+        'vet service', 'animal care', 'livestock health'
     ],
     
-    'Concrete_Construction': [
-        'concrete', 'Allied Concrete', 'pre-stress', 'paving'
+    'L6_equipment_hire_fuel': [
+        'equipment hire fuel', 'hire fuel', 'rental fuel', 'contractor fuel',
+        'plant hire fuel', 'machinery fuel'
     ],
     
-    'Plumbing_Supplies': [
-        'plumbing', 'pipe', 'oakleys plumbing', 'mico plumbing'
+    'L7_cattle_feed': [
+        'cattle feed', 'stock feed', 'animal feed', 'livestock feed',
+        'grain', 'meal', 'supplement', 'hay', 'silage', 'fodder',
+        'dairy feed', 'beef feed', 'calf milk', 'molasses'
     ],
     
-    'Paint_Supplies': [
-        'paint', 'resene', 'colour shop'
+    'L7_equipment_hire': [
+        'hire', 'rental', 'equipment hire', 'u-hire', 'porter hire',
+        'plant hire', 'machinery hire', 'tool hire', 'scaffold hire',
+        'equipment rental', 'machinery rental'
     ],
     
-    'Equipment_Hire': [
-        'hire', 'rental', 'equipment hire', 'u-hire', 'porter hire'
+    'L7_mechanic': [
+        'mechanic', 'mechanical', 'auto repair', 'workshop', 'garage',
+        'service centre', 'automotive repair', 'vehicle service',
+        'maintenance', 'auto service'
     ],
     
-    'Accommodation_Travel': [
-        'house of travel', 'travel', 'hotel', 'motel', 'lodge', 
-        'accommodation', 'motor inn', 'motor lodge'
+    'L8_Landscaping': [
+        'landscaping', 'landscape', 'nursery', 'garden', 'lawn', 'turf',
+        'irrigation', 'tree', 'plants', 'gardening', 'groundcare',
+        'horticulture', 'arborist'
     ],
     
-    'Farm_Supplies': [
-        'farm supplies', 'farmlands', 'rural', 'agri', 'seed', 'grain', 
-        'stock yard', 'farmside', 'agriline', 'saddlery'
-    ],
-    
-    'Landscaping_Nursery': [
-        'nursery', 'garden', 'landscap', 'irrigation', 'lawn', 'tree'
-    ],
-    
-    'Gas_LPG': [
-        'rockgas', 'lpg', 'gas bottle', 'elgas'
-    ],
-    
-    'Retail_Office': [
-        'whitcoulls', 'paper plus', 'office', 'stationery'
-    ],
-    
-    'Pharmacy_Medical': [
-        'pharmacy', 'dental', 'medical', 'health', 'eyecare', 'optom'
-    ],
-    
-    'Telecommunications': [
-        'ubb', 'broadband', 'wireless', 'spark', 'vodafone', 'telecom'
-    ],
-    
-    'Supermarket_Grocery': [
-        'new world', 'four square', 'supermarket', 'freshchoice', 
-        'paknsave', 'countdown', 'supervalue', 'raeward fresh'
-    ],
-    
-    'Restaurant_Hospitality': [
-        'restaurant', 'cafe', 'bar', 'tavern', 'pub', 'hotel', 'bakery'
-    ],
-    
-    'Furniture_Appliances': [
-        'furniture', 'appliance', 'harvey norman', 'beds', 'mattress'
-    ],
-    
-    'Jewellery': [
-        'jewel', 'diamond', 'showcase jewel'
-    ],
-    
-    'Clothing_Fashion': [
-        'fashion', 'clothing', 'boutique', 'mens wear', 'ladies wear'
+    'L9_infrastructure_consumables': [
+        'infrastructure', 'consumables', 'concrete', 'aggregate', 'gravel',
+        'sand', 'metal', 'chip', 'culvert', 'pipe', 'drainage',
+        'steel', 'reinforcing', 'mesh', 'fastener', 'bolt', 'screw',
+        'wire', 'fencing', 'post', 'strainer'
     ]
 }
 
 # =========================================================
-# KEYWORD-BASED CLASSIFICATION FUNCTION
+# HELPER FUNCTION: NORMALIZE TEXT
 # =========================================================
 
-def classify_merchant(merchant_name):
+def normalize_text(text):
     """
-    Classify merchant into business type based on keyword matching.
-    Returns tuple: (business_type, confidence, matching_keyword)
+    Normalize text for keyword matching:
+    - lowercase
+    - remove punctuation
+    - collapse whitespace
     """
-    if pd.isna(merchant_name):
-        return ('Unclassified', 0, '')
+    if pd.isna(text):
+        return ""
+    text = str(text).lower()
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+# =========================================================
+# CLASSIFICATION FUNCTION
+# =========================================================
+
+def classify_merchant_to_layer(row):
+    """
+    Classify merchant into match_layer based on keyword matching across
+    Account Name, Discount Offered, and Discount Offered 2.
+    Returns tuple: (match_layer, confidence, matching_keyword, source_column)
+    """
+    # Combine all searchable text
+    account_name = normalize_text(row.get('Account Name', ''))
+    discount_1 = normalize_text(row.get('Discount Offered', ''))
+    discount_2 = normalize_text(row.get('Discount Offered 2', ''))
     
-    merchant_lower = str(merchant_name).lower()
+    combined_text = f"{account_name} {discount_1} {discount_2}"
     
     # Track all potential matches
     matches = []
     
-    for business_type, keywords in business_type_keywords.items():
+    for match_layer, keywords in match_layer_keywords.items():
         for keyword in keywords:
-            if keyword in merchant_lower:
-                # Calculate confidence score
-                confidence = 70 + len(keyword)  # Longer keywords = higher confidence
-                
-                # Boost if keyword is at the start
-                if merchant_lower.startswith(keyword):
+            keyword_normalized = normalize_text(keyword)
+            
+            # Check each field separately to track source
+            if keyword_normalized in account_name:
+                confidence = 80 + len(keyword)
+                if account_name.startswith(keyword_normalized):
                     confidence += 10
-                
-                # Boost if keyword is the whole name (exact match)
-                if merchant_lower == keyword:
-                    confidence += 15
-                
                 matches.append({
-                    'business_type': business_type,
+                    'match_layer': match_layer,
                     'confidence': min(confidence, 99),
-                    'keyword': keyword
+                    'keyword': keyword,
+                    'source': 'Account Name'
+                })
+            
+            if keyword_normalized in discount_1:
+                confidence = 85 + len(keyword)  # Higher weight for discount fields
+                matches.append({
+                    'match_layer': match_layer,
+                    'confidence': min(confidence, 99),
+                    'keyword': keyword,
+                    'source': 'Discount Offered'
+                })
+            
+            if keyword_normalized in discount_2:
+                confidence = 85 + len(keyword)
+                matches.append({
+                    'match_layer': match_layer,
+                    'confidence': min(confidence, 99),
+                    'keyword': keyword,
+                    'source': 'Discount Offered 2'
                 })
     
     if not matches:
-        return ('Unclassified', 0, '')
+        return ('Unmapped', 0, '', '')
     
     # Return the match with highest confidence
     best_match = max(matches, key=lambda x: x['confidence'])
-    return (best_match['business_type'], best_match['confidence'], best_match['keyword'])
+    return (
+        best_match['match_layer'], 
+        best_match['confidence'], 
+        best_match['keyword'],
+        best_match['source']
+    )
 
 # =========================================================
 # APPLY CLASSIFICATION
 # =========================================================
 
 print("\n" + "="*70)
-print("CLASSIFYING MERCHANTS BY BUSINESS TYPE")
+print("CLASSIFYING MERCHANTS TO MATCH LAYERS")
 print("="*70)
 
-merchant_df[['business_type', 'confidence', 'matching_keyword']] = merchant_df['Account Name'].apply(
-    lambda x: pd.Series(classify_merchant(x))
+merchant_df[['match_layer', 'confidence', 'matching_keyword', 'source_column']] = merchant_df.apply(
+    lambda row: pd.Series(classify_merchant_to_layer(row)), axis=1
 )
 
 # =========================================================
 # ANALYSIS OF RESULTS
 # =========================================================
 
-classified = merchant_df[merchant_df['business_type'] != 'Unclassified']
-unclassified = merchant_df[merchant_df['business_type'] == 'Unclassified']
+mapped = merchant_df[merchant_df['match_layer'] != 'Unmapped']
+unmapped = merchant_df[merchant_df['match_layer'] == 'Unmapped']
 
 print(f"\nTotal merchants: {len(merchant_df):,}")
-print(f"Classified: {len(classified):,} ({len(classified)/len(merchant_df)*100:.1f}%)")
-print(f"Unclassified: {len(unclassified):,} ({len(unclassified)/len(merchant_df)*100:.1f}%)")
+print(f"Mapped to match layers: {len(mapped):,} ({len(mapped)/len(merchant_df)*100:.1f}%)")
+print(f"Unmapped: {len(unmapped):,} ({len(unmapped)/len(merchant_df)*100:.1f}%)")
 
 print("\n" + "="*70)
-print("BUSINESS TYPE DISTRIBUTION")
+print("MATCH LAYER DISTRIBUTION")
 print("="*70)
-business_type_counts = merchant_df['business_type'].value_counts()
-print(business_type_counts.to_string())
+match_layer_counts = merchant_df['match_layer'].value_counts()
+print(match_layer_counts.to_string())
+
+print("\n" + "="*70)
+print("SOURCE COLUMN DISTRIBUTION")
+print("="*70)
+source_counts = mapped['source_column'].value_counts()
+print(source_counts.to_string())
 
 print("\n" + "="*70)
 print("CONFIDENCE SCORE STATISTICS")
 print("="*70)
-print(f"Mean confidence: {classified['confidence'].mean():.1f}")
-print(f"Median confidence: {classified['confidence'].median():.1f}")
-print(f"Min confidence: {classified['confidence'].min():.1f}")
-print(f"Max confidence: {classified['confidence'].max():.1f}")
+print(f"Mean confidence: {mapped['confidence'].mean():.1f}")
+print(f"Median confidence: {mapped['confidence'].median():.1f}")
+print(f"Min confidence: {mapped['confidence'].min():.1f}")
+print(f"Max confidence: {mapped['confidence'].max():.1f}")
 
 print("\n" + "="*70)
-print("SAMPLE CLASSIFICATIONS (by business type)")
+print("SAMPLE MAPPINGS (by match_layer)")
 print("="*70)
 
-for business_type in business_type_counts.head(10).index:
-    if business_type != 'Unclassified':
-        sample = classified[classified['business_type'] == business_type].head(5)
-        print(f"\n{business_type}:")
-        print(sample[['Account Name', 'confidence', 'matching_keyword']].to_string(index=False))
+for match_layer in match_layer_counts.head(15).index:
+    if match_layer != 'Unmapped':
+        sample = mapped[mapped['match_layer'] == match_layer].head(5)
+        print(f"\n{match_layer}:")
+        print(sample[['Account Name', 'confidence', 'matching_keyword', 'source_column']].to_string(index=False))
 
 print("\n" + "="*70)
-print("UNCLASSIFIED MERCHANTS (First 30)")
+print("UNMAPPED MERCHANTS (First 30)")
 print("="*70)
-print(unclassified[['Account Name']].head(30).to_string(index=False))
+print(unmapped[['Account Name', 'Discount Offered', 'Discount Offered 2']].head(30).to_string(index=False))
 
 # =========================================================
 # SAVE OUTPUTS
@@ -233,30 +248,51 @@ print("\n" + "="*70)
 print("SAVING OUTPUTS")
 print("="*70)
 
-# Save full merchant file with business types
-merchant_df.to_csv(output_dir / '14_merchants_grouped_by_business_type.csv', index=False)
-print(f"Saved: {output_dir / 'merchants_grouped_by_business_type.csv'}")
+# Save full merchant file with match layers
+merchant_df.to_csv(output_dir / '14_merchants_mapped_to_match_layers.csv', index=False)
+print(f"Saved: 14_merchants_mapped_to_match_layers.csv")
 
-# Create business type summary
-business_summary = merchant_df.groupby('business_type').agg({
+# Create match layer summary
+match_layer_summary = merchant_df.groupby('match_layer').agg({
     'Account Name': 'count',
     'confidence': ['mean', 'min', 'max']
 }).round(1)
-business_summary.columns = ['merchant_count', 'avg_confidence', 'min_confidence', 'max_confidence']
-business_summary = business_summary.sort_values('merchant_count', ascending=False)
-business_summary.to_csv(output_dir / '14_business_type_summary.csv')
-print(f"Saved: {output_dir / '14_business_type_summary.csv'}")
+match_layer_summary.columns = ['merchant_count', 'avg_confidence', 'min_confidence', 'max_confidence']
+match_layer_summary = match_layer_summary.sort_values('merchant_count', ascending=False)
+match_layer_summary.to_csv(output_dir / '14_match_layer_summary.csv')
+print(f"Saved: 14_match_layer_summary.csv")
 
-# Save unclassified merchants for manual review
-unclassified[['ATS Number', 'Account Name', 'Discount Offered', 'Discount Offered 2']].to_csv(
-    output_dir / '14_merchants_unclassified.csv', index=False
+# Save unmapped merchants for manual review
+unmapped[['ATS Number', 'Account Name', 'Discount Offered', 'Discount Offered 2']].to_csv(
+    output_dir / '14_merchants_unmapped.csv', index=False
 )
-print(f"Saved: {output_dir / '14_merchants_unclassified.csv'}")
+print(f"Saved: 14_merchants_unmapped.csv")
+
+# =========================================================
+# SAVE MERCHANT DISCOUNT DETAIL WITH MATCH_LAYER
+# =========================================================
+
+print("\n" + "="*70)
+print("SAVING MERCHANT DISCOUNT DETAIL WITH MATCH_LAYER")
+print("="*70)
+
+# Create a copy of the merchant dataframe with match_layer column
+merchant_with_layer_df = merchant_df.copy()
+
+# Save as CSV
+merchant_with_layer_output = output_dir / '14_merchant_discount_detail_with_match_layer.csv'
+merchant_with_layer_df.to_csv(merchant_with_layer_output, index=False)
+
+print(f"Saved: 14_merchant_discount_detail_with_match_layer.csv")
+print(f"Total columns: {len(merchant_with_layer_df.columns)}")
+print(f"New columns added: match_layer, confidence, matching_keyword, source_column")
+
+print("\n" + "="*70)
 
 print("\n" + "="*70)
 print("PROCESS COMPLETE!")
 print("="*70)
 print("\nNext steps:")
-print("1. Review 'merchants_grouped_by_business_type.csv'")
-print("2. Manually classify merchants in 'merchants_unclassified.csv'")
-print("3. Then map business_type to match_layer labels")
+print("1. Review '14_merchants_mapped_to_match_layers.csv'")
+print("2. Manually map merchants in '14_merchants_unmapped.csv'")
+print("3. Use this mapping to update invoice line items in matching progress file")
