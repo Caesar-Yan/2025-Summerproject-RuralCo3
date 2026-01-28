@@ -59,7 +59,7 @@ print("\n" + "="*70)
 print("LOADING MONTHLY SPENDING DATA")
 print("="*70)
 
-monthly_df = pd.read_csv(visualisations_dir / "monthly_totals_Period_4_Entire.csv")
+monthly_df = pd.read_csv(visualisations_dir / "9.4_monthly_totals_Period_4_Entire.csv")
 monthly_df['invoice_period'] = pd.to_datetime(monthly_df['invoice_period'])
 monthly_df = monthly_df.sort_values('invoice_period').reset_index(drop=True)
 

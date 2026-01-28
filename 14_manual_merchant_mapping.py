@@ -287,6 +287,3 @@ print(f"     - Use this as your main working file")
 print(f"  2. {output_file_unmapped.name}")
 print(f"     - Only merchants without industry labels")
 print(f"     - Feed this to 14.1_automated_merchant_mapping.py")
-
-print("\n📋 NEXT STEP:")
-print("Run 14.1_automated_merchant_mapping.py to process merchants with no industry label")

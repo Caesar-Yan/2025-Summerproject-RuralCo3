@@ -29,7 +29,7 @@ base_dir = Path("T:/projects/2025/RuralCo/Data provided by RuralCo 20251202/Rura
 visualisations_dir = base_dir / "visualisations"
 
 # Load the entire period monthly totals
-monthly_df = pd.read_csv(visualisations_dir / "monthly_totals_Period_4_Entire.csv")
+monthly_df = pd.read_csv(visualisations_dir / "9.4_monthly_totals_Period_4_Entire.csv")
 
 # Keep only the columns we need
 monthly_df = monthly_df[['invoice_period', 'total_undiscounted_price']].copy()
