@@ -15102,6 +15102,3602 @@ print(f"{'='*70}")
 print(unmatched_df['description'].value_counts().head(50))
 print(f"{'='*70}\n")
 
-11111111111
+# =========================================================================================================================
+# water delivery - hour                                    ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'water delivery - hour'
 
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'water delivery - hour',
+    output_dir=output_dir
+)
 
+# Print unique values
+print("\nUnique description values matching 'water delivery - hour':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'water delivery - hour') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L3_no_discount_offered'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} water delivery - hour rows to 'L3_no_discount_offered'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after water delivery - hour update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L3 water delivery - hour  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"water delivery - hour rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# compactor plate * medium (80kg)                                      ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'compactor plate * medium (80kg)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'compactor plate * medium (80kg)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'compactor plate * medium (80kg)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'compactor plate * medium (80kg)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_equipment_hire'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} compactor plate * medium (80kg) rows to 'L7_equipment_hire'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after compactor plate * medium (80kg) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 compactor plate * medium (80kg)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"compactor plate * medium (80kg) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# compactor plate * small (60kg)                            ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'compactor plate * small (60kg)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'compactor plate * small (60kg)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'compactor plate * small (60kg)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'compactor plate * small (60kg)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_equipment_hire'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} compactor plate * small (60kg) rows to 'L7_equipment_hire'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after compactor plate * small (60kg) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 compactor plate * small (60kg)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"compactor plate * small (60kg) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# forklift cylinder monthly rental                            ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'forklift cylinder monthly rental'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'forklift cylinder monthly rental',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'forklift cylinder monthly rental':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'forklift cylinder monthly rental') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_equipment_hire'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} forklift cylinder monthly rental rows to 'L7_equipment_hire'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after forklift cylinder monthly rental update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 forklift cylinder monthly rental  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"forklift cylinder monthly rental rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# q-scoop-crusher dust- barmac- dobson st              ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'q-scoop-crusher dust- barmac- dobson st'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'q-scoop-crusher dust- barmac- dobson st',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'q-scoop-crusher dust- barmac- dobson st':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'q-scoop-crusher dust- barmac- dobson st') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_equipment_hire'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} q-scoop-crusher dust- barmac- dobson st rows to 'L7_equipment_hire'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after q-scoop-crusher dust- barmac- dobson st update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 q-scoop-crusher dust- barmac- dobson st  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"q-scoop-crusher dust- barmac- dobson st rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# q-scoop-zland- bark-mulch                         ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'q-scoop-zland- bark-mulch'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'q-scoop-zland- bark-mulch',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'q-scoop-zland- bark-mulch':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'q-scoop-zland- bark-mulch') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_equipment_hire'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} q-scoop-zland- bark-mulch rows to 'L7_equipment_hire'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after q-scoop-zland- bark-mulch update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 q-scoop-zland- bark-mulch  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"q-scoop-zland- bark-mulch rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# q-scoop-zlime-white lime chip                               ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'q-scoop-zlime-white lime chip'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'q-scoop-zlime-white lime chip',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'q-scoop-zlime-white lime chip':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'q-scoop-zlime-white lime chip') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_equipment_hire'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} q-scoop-zlime-white lime chip rows to 'L7_equipment_hire'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after q-scoop-zlime-white lime chip update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 q-scoop-zlime-white lime chip  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"q-scoop-zlime-white lime chip rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# vermeer - post hole digger                              ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'vermeer - post hole digger'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'vermeer - post hole digger',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'vermeer - post hole digger':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'vermeer - post hole digger') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_equipment_hire'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} vermeer - post hole digger rows to 'L7_equipment_hire'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after vermeer - post hole digger update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 vermeer - post hole digger  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"vermeer - post hole digger rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# heart children donation $5                         ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'heart children donation $5'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'heart children donation $5',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'heart children donation $5':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'heart children donation $5') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_mechanic'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} heart children donation $5 rows to 'L7_mechanic'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after heart children donation $5 update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 heart children donation $5  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"heart children donation $5 rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# mtx 12t fr spkt dr200                                     ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'mtx 12t fr spkt dr200'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'mtx 12t fr spkt dr200',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'mtx 12t fr spkt dr200':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'mtx 12t fr spkt dr200') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_mechanic'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} mtx 12t fr spkt dr200 rows to 'L7_mechanic'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after mtx 12t fr spkt dr200 update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 mtx 12t fr spkt dr200  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"mtx 12t fr spkt dr200 rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# w  vehicle pre cof trailer 4 axle                           ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'w  vehicle pre cof trailer 4 axle'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'w  vehicle pre cof trailer 4 axle',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'w  vehicle pre cof trailer 4 axle':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'w  vehicle pre cof trailer 4 axle') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L7_mechanic'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} w  vehicle pre cof trailer 4 axle rows to 'L7_mechanic'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after w  vehicle pre cof trailer 4 axle update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L7 w  vehicle pre cof trailer 4 axle  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"w  vehicle pre cof trailer 4 axle rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# alfaxan (20ml)                                              ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'alfaxan (20ml)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'alfaxan (20ml)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'alfaxan (20ml)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'alfaxan (20ml)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} alfaxan (20ml) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after alfaxan (20ml) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 alfaxan (20ml)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"alfaxan (20ml) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# blackhawk original adult dog - chicken &             ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'blackhawk original adult dog - chicken &'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'blackhawk original adult dog - chicken &',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'blackhawk original adult dog - chicken &':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'blackhawk original adult dog - chicken &') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} blackhawk original adult dog - chicken & rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after blackhawk original adult dog - chicken & update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 blackhawk original adult dog - chicken &  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"blackhawk original adult dog - chicken & rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# bravecto tablet for large dogs (20-40kg)         ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'bravecto tablet for large dogs (20-40kg)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'bravecto tablet for large dogs (20-40kg)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'bravecto tablet for large dogs (20-40kg)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'bravecto tablet for large dogs (20-40kg)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} bravecto tablet for large dogs (20-40kg) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after bravecto tablet for large dogs (20-40kg) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 bravecto tablet for large dogs (20-40kg)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"bravecto tablet for large dogs (20-40kg) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# ca : anaesthesia : premedication                  ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'ca : anaesthesia : premedication'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'ca : anaesthesia : premedication',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'ca : anaesthesia : premedication':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'ca : anaesthesia : premedication') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} ca : anaesthesia : premedication rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after ca : anaesthesia : premedication update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 ca : anaesthesia : premedication  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"ca : anaesthesia : premedication rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# campyvax 4 100ml                                  ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'campyvax 4 100ml'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'campyvax 4 100ml',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'campyvax 4 100ml':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'campyvax 4 100ml') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} campyvax 4 100ml rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after campyvax 4 100ml update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 campyvax 4 100ml  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"campyvax 4 100ml rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# catolyst mini dose (per ml)                               ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'catolyst mini dose (per ml)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'catolyst mini dose (per ml)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'catolyst mini dose (per ml)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'catolyst mini dose (per ml)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} catolyst mini dose (per ml) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after catolyst mini dose (per ml) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 catolyst mini dose (per ml)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"catolyst mini dose (per ml) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# coppermax copper capsules 10g (elanco)                  ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'coppermax copper capsules 10g (elanco)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'coppermax copper capsules 10g (elanco)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'coppermax copper capsules 10g (elanco)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'coppermax copper capsules 10g (elanco)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} coppermax copper capsules 10g (elanco) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after coppermax copper capsules 10g (elanco) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 coppermax copper capsules 10g (elanco)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"coppermax copper capsules 10g (elanco) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# cyclase - per 2ml dose                           ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'cyclase - per 2ml dose'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'cyclase - per 2ml dose',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'cyclase - per 2ml dose':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'cyclase - per 2ml dose') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} cyclase - per 2ml dose rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after cyclase - per 2ml dose update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 cyclase - per 2ml dose  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"cyclase - per 2ml dose rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# dexa 0.2 inj 50ml                                ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'dexa 0.2 inj 50ml'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'dexa 0.2 inj 50ml',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'dexa 0.2 inj 50ml':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'dexa 0.2 inj 50ml') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} dexa 0.2 inj 50ml rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after dexa 0.2 inj 50ml update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 dexa 0.2 inj 50ml  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"dexa 0.2 inj 50ml rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# dryclox xtra dry cow                                      ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'dryclox xtra dry cow'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'dryclox xtra dry cow',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'dryclox xtra dry cow':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'dryclox xtra dry cow') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} dryclox xtra dry cow rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after dryclox xtra dry cow update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 dryclox xtra dry cow  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"dryclox xtra dry cow rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# elastrator rings x 500 - all colours                     ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'elastrator rings x 500 - all colours'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'elastrator rings x 500 - all colours',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'elastrator rings x 500 - all colours':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'elastrator rings x 500 - all colours') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} elastrator rings x 500 - all colours rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after elastrator rings x 500 - all colours update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 elastrator rings x 500 - all colours  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"elastrator rings x 500 - all colours rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# filter oil  (-07j00)                                ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'filter oil  (-07j00)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'filter oil  (-07j00)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'filter oil  (-07j00)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'filter oil  (-07j00)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} filter oil  (-07j00) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after filter oil  (-07j00) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 filter oil  (-07j00)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"filter oil  (-07j00) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# fluids : per bag : hartmanns : 500mls                               ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'fluids : per bag : hartmanns : 500mls'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'fluids : per bag : hartmanns : 500mls',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'fluids : per bag : hartmanns : 500mls':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'fluids : per bag : hartmanns : 500mls') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} fluids : per bag : hartmanns : 500mls rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after fluids : per bag : hartmanns : 500mls update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 fluids : per bag : hartmanns : 500mls  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"fluids : per bag : hartmanns : 500mls rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# gasket drain p                                                   ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'gasket drain p'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'gasket drain p',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'gasket drain p':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'gasket drain p') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} gasket drain p rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after gasket drain p update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 gasket drain p  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"gasket drain p rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# gun injector 2ml acu-vax isl (ea=1)                             ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'gun injector 2ml acu-vax isl (ea=1)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'gun injector 2ml acu-vax isl (ea=1)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'gun injector 2ml acu-vax isl (ea=1)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'gun injector 2ml acu-vax isl (ea=1)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} gun injector 2ml acu-vax isl (ea=1) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after gun injector 2ml acu-vax isl (ea=1) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 gun injector 2ml acu-vax isl (ea=1)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"gun injector 2ml acu-vax isl (ea=1) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# hills prescription diet a/d for cats & d                          ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'hills prescription diet a/d for cats & d'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'hills prescription diet a/d for cats & d',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'hills prescription diet a/d for cats & d':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'hills prescription diet a/d for cats & d') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} hills prescription diet a/d for cats & d rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after hills prescription diet a/d for cats & d update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 hills prescription diet a/d for cats & d  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"hills prescription diet a/d for cats & d rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# hills prescription diet c/d multicare st                   ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'hills prescription diet c/d multicare st'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'hills prescription diet c/d multicare st',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'hills prescription diet c/d multicare st':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'hills prescription diet c/d multicare st') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} hills prescription diet c/d multicare st rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after hills prescription diet c/d multicare st update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 hills prescription diet c/d multicare st  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"hills prescription diet c/d multicare st rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# hills prescription diet metabolic dog (d                ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'hills prescription diet metabolic dog (d'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'hills prescription diet metabolic dog (d',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'hills prescription diet metabolic dog (d':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'hills prescription diet metabolic dog (d') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} hills prescription diet metabolic dog (d rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after hills prescription diet metabolic dog (d update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 hills prescription diet metabolic dog (d  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"hills prescription diet metabolic dog (d rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# la - consult drying off                                 ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'la - consult drying off'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'la - consult drying off',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'la - consult drying off':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'la - consult drying off') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} la - consult drying off rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after la - consult drying off update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 la - consult drying off  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"la - consult drying off rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# la - post mortem (add species/details in                      ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'la - post mortem (add species/details in'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'la - post mortem (add species/details in',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'la - post mortem (add species/details in':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'la - post mortem (add species/details in') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} la - post mortem (add species/details in rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after la - post mortem (add species/details in update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 la - post mortem (add species/details in  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"la - post mortem (add species/details in rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# la - scan - uterus (endometritis)                            ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'la - scan - uterus (endometritis)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'la - scan - uterus (endometritis)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'la - scan - uterus (endometritis)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'la - scan - uterus (endometritis)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} la - scan - uterus (endometritis) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after la - scan - uterus (endometritis) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 la - scan - uterus (endometritis)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"la - scan - uterus (endometritis) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# la - scan ageing final                                                ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'la - scan ageing final'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'la - scan ageing final',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'la - scan ageing final':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'la - scan ageing final') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} la - scan ageing final rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after la - scan ageing final update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 la - scan ageing final  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"la - scan ageing final rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# la - scan recorder (per hour)                                                  ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'la - scan recorder (per hour)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'la - scan recorder (per hour)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'la - scan recorder (per hour)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'la - scan recorder (per hour)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} la - scan recorder (per hour) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after la - scan recorder (per hour) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 la - scan recorder (per hour)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"la - scan recorder (per hour) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# methadyne inj 10mg per ml 10)                                  ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'methadyne inj 10mg per ml 10)'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'methadyne inj 10mg per ml 10)',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'methadyne inj 10mg per ml 10)':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'methadyne inj 10mg per ml 10)') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} methadyne inj 10mg per ml 10) rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after methadyne inj 10mg per ml 10) update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 methadyne inj 10mg per ml 10)  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"methadyne inj 10mg per ml 10) rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# microchip : nzcar registration                                ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'microchip : nzcar registration'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'microchip : nzcar registration',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'microchip : nzcar registration':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'microchip : nzcar registration') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} microchip : nzcar registration rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after microchip : nzcar registration update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 microchip : nzcar registration  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"microchip : nzcar registration rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# milpro cat tablets (2-8kg) - per tablet                   ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'milpro cat tablets (2-8kg) - per tablet'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'milpro cat tablets (2-8kg) - per tablet',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'milpro cat tablets (2-8kg) - per tablet':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'milpro cat tablets (2-8kg) - per tablet') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} milpro cat tablets (2-8kg) - per tablet rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after milpro cat tablets (2-8kg) - per tablet update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 milpro cat tablets (2-8kg) - per tablet  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"milpro cat tablets (2-8kg) - per tablet rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# milpro small dog/puppy tablets (0.5-10kg                  ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'milpro small dog/puppy tablets (0.5-10kg'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'milpro small dog/puppy tablets (0.5-10kg',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'milpro small dog/puppy tablets (0.5-10kg':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'milpro small dog/puppy tablets (0.5-10kg') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} milpro small dog/puppy tablets (0.5-10kg rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after milpro small dog/puppy tablets (0.5-10kg update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 milpro small dog/puppy tablets (0.5-10kg  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"milpro small dog/puppy tablets (0.5-10kg rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# nexgard spectra for medium dogs (7.6-15k          ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'nexgard spectra for medium dogs (7.6-15k'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'nexgard spectra for medium dogs (7.6-15k',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'nexgard spectra for medium dogs (7.6-15k':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'nexgard spectra for medium dogs (7.6-15k') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} nexgard spectra for medium dogs (7.6-15k rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after nexgard spectra for medium dogs (7.6-15k update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 nexgard spectra for medium dogs (7.6-15k  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"nexgard spectra for medium dogs (7.6-15k rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# pad set disc fr a400/500fk2>7*                  ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'pad set disc fr a400/500fk2>7*'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'pad set disc fr a400/500fk2>7*',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'pad set disc fr a400/500fk2>7*':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'pad set disc fr a400/500fk2>7*') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} pad set disc fr a400/500fk2>7* rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after pad set disc fr a400/500fk2>7* update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 pad set disc fr a400/500fk2>7*  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"pad set disc fr a400/500fk2>7* rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# prolaject b12 1000 + selenium 500ml                  ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'prolaject b12 1000 + selenium 500ml'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'prolaject b12 1000 + selenium 500ml',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'prolaject b12 1000 + selenium 500ml':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'prolaject b12 1000 + selenium 500ml') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} prolaject b12 1000 + selenium 500ml rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after prolaject b12 1000 + selenium 500ml update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 prolaject b12 1000 + selenium 500ml  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"prolaject b12 1000 + selenium 500ml rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# recovery collar : elizabethan : buster c          ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'recovery collar : elizabethan : buster c'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'recovery collar : elizabethan : buster c',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'recovery collar : elizabethan : buster c':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'recovery collar : elizabethan : buster c') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} recovery collar : elizabethan : buster c rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after recovery collar : elizabethan : buster c update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 recovery collar : elizabethan : buster c  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"recovery collar : elizabethan : buster c rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# scabigard 250 dose                                ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'scabigard 250 dose'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'scabigard 250 dose',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'scabigard 250 dose':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'scabigard 250 dose') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} scabigard 250 dose rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after scabigard 250 dose update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 scabigard 250 dose  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"scabigard 250 dose rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# solensia 7mg                                              ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'solensia 7mg'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'solensia 7mg',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'solensia 7mg':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'solensia 7mg') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} solensia 7mg rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after solensia 7mg update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 solensia 7mg  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"solensia 7mg rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# suture : per packet : pdm/serasynth/pds/                 ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'suture : per packet : pdm/serasynth/pds/'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'suture : per packet : pdm/serasynth/pds/',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'suture : per packet : pdm/serasynth/pds/':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'suture : per packet : pdm/serasynth/pds/') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} suture : per packet : pdm/serasynth/pds/ rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after suture : per packet : pdm/serasynth/pds/ update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 suture : per packet : pdm/serasynth/pds/  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"suture : per packet : pdm/serasynth/pds/ rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# suture : per packet : riverlon/seralon/l              ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'suture : per packet : riverlon/seralon/l'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'suture : per packet : riverlon/seralon/l',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'suture : per packet : riverlon/seralon/l':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'suture : per packet : riverlon/seralon/l') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} suture : per packet : riverlon/seralon/l rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after suture : per packet : riverlon/seralon/l update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 suture : per packet : riverlon/seralon/l  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"suture : per packet : riverlon/seralon/l rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# toxovax - 200 dose                             ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'toxovax - 200 dose'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'toxovax - 200 dose',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'toxovax - 200 dose':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'toxovax - 200 dose') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} toxovax - 200 dose rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after toxovax - 200 dose update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 toxovax - 200 dose  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"toxovax - 200 dose rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# ultravac 5in1 250ml                                     ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'ultravac 5in1 250ml'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'ultravac 5in1 250ml',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'ultravac 5in1 250ml':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'ultravac 5in1 250ml') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} ultravac 5in1 250ml rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after ultravac 5in1 250ml update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 ultravac 5in1 250ml  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"ultravac 5in1 250ml rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# vetserve drontal mailout - 6kg cat                        ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'vetserve drontal mailout - 6kg cat'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'vetserve drontal mailout - 6kg cat',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'vetserve drontal mailout - 6kg cat':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'vetserve drontal mailout - 6kg cat') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} vetserve drontal mailout - 6kg cat rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after vetserve drontal mailout - 6kg cat update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 vetserve drontal mailout - 6kg cat  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"vetserve drontal mailout - 6kg cat rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
+
+# =========================================================================================================================
+# w-bolts-z-washers                                       ANALYSIS
+# =========================================================================================================================
+# Filter for rows with exact "Lube (Per Litre)" in description column
+mask_excavator = unmatched_df['description'].str.lower() == 'w-bolts-z-washers'
+
+excavator_df = save_and_summarize2(
+    unmatched_df, 
+    mask_excavator, 
+    '13.6_filtered_mask_WIP.csv',
+    'w-bolts-z-washers',
+    output_dir=output_dir
+)
+
+# Print unique values
+print("\nUnique description values matching 'w-bolts-z-washers':")
+print(excavator_df['description'].unique())
+
+# =========================================================
+# UPDATE FULL DATAFRAME WITH LA - Vet Per Min Charge FLAGS
+# =========================================================
+# Update the la vet per min charge rows in the FULL dataframe
+mask_excavator_full = (
+    (full_df['description'].str.lower() == 'w-bolts-z-washers') & 
+    (full_df['match_layer'] == 'unmatched')
+)
+
+full_df.loc[mask_excavator_full, 'match_layer'] = 'L5_Vet'
+
+# Print update summary
+print(f"\n{'='*70}")
+print(f"Updated {mask_excavator_full.sum():,} w-bolts-z-washers rows to 'L5_Vet'")
+print(f"\nUpdated match_layer value counts:")
+print(full_df['match_layer'].value_counts().sort_index())
+print(f"{'='*70}")
+
+# =========================================================
+# SAVE UPDATED FULL FILE
+# =========================================================
+full_df.to_csv(merchant_folder_dir / '13.6_matching_progress.csv', index=False)
+print(f"\nSaved updated file to: 13.6_matching_progress.csv")
+
+# =========================================================
+# FILTER AND SAVE REMAINING UNMATCHED
+# =========================================================
+unmatched_mask = full_df['match_layer'] == 'unmatched'
+
+unmatched_df = save_and_summarize2(
+    full_df, 
+    unmatched_mask, 
+    '13.6_invoice_line_items_still_unmatched.csv',
+    'Still unmatched after w-bolts-z-washers update',
+    output_dir=output_dir
+)
+
+print(f"\n{'='*70}")
+print(f"L5 w-bolts-z-washers  MATCHING SUMMARY")
+print(f"{'='*70}")
+print(f"Total rows in dataset: {len(full_df):,}")
+print(f"w-bolts-z-washers rows flagged: {mask_excavator_full.sum():,}")
+print(f"Remaining unmatched rows: {len(unmatched_df):,}")
+print(f"{'='*70}")
+
+# =========================================================
+# ANALYZE REMAINING UNMATCHED DESCRIPTIONS
+# =========================================================
+print(f"\n{'='*70}")
+print(f"TOP 50 MOST COMMON DESCRIPTION VALUES IN REMAINING UNMATCHED")
+print(f"{'='*70}")
+print(unmatched_df['description'].value_counts().head(50))
+print(f"{'='*70}\n")
