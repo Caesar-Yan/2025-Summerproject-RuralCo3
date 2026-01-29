@@ -31,17 +31,22 @@ warnings.filterwarnings('ignore')
 BASE_PATH = Path(r"\\file\Usersc$\cch155\Home\Desktop\2025\data605\2025-Summerproject-RuralCo3")
 ALT_BASE = Path(r"T:\projects\2025\RuralCo\Data provided by RuralCo 20251202\RuralCo3")
 
-VIS_DIR = BASE_PATH / 'visualisations'
-FORECAST_DIR = BASE_PATH / 'forecast'
-VIS_DIR.mkdir(exist_ok=True)
+VIS_DIR = ALT_BASE / 'visualisations'
+FORECAST_DIR = ALT_BASE / 'forecast'
 
 ALT_VIS = ALT_BASE / 'visualisations'
 ALT_FORECAST = ALT_BASE / 'forecast'
+
+# Ensure output directories exist
+VIS_DIR.mkdir(parents=True, exist_ok=True)
+FORECAST_DIR.mkdir(parents=True, exist_ok=True)
 
 print("\n" + "="*80)
 print("FORECAST OVERLAY: DISCOUNTED vs UNDISCOUNTED")
 print("Including Historical Actuals from 9.4")
 print("="*80)
+print(f"\n📁 Output directory: {VIS_DIR}")
+print(f"   (Full path: {VIS_DIR.resolve()})")
 
 # Load historical actuals
 print("\n📁 Loading historical actuals...")
@@ -186,77 +191,94 @@ print(f"    Min:    {merged['discount_rate_pct'].min():>15.2f}%")
 print(f"    Max:    {merged['discount_rate_pct'].max():>15.2f}%")
 
 # Create visualization
-fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+fig, ax = plt.subplots(figsize=(14, 7))
 
 # Plot 1: Overlay of actual and forecasted discounted/undiscounted
-ax1 = axes[0, 0]
 # Historical actuals
-ax1.plot(historical_subset['invoice_period'], historical_subset['actual_discounted_price'],
+ax.plot(historical_subset['invoice_period'], historical_subset['actual_discounted_price'],
          marker='o', linewidth=2, markersize=6, label='Actual Discounted (9.4)', 
          color='#4472C4', linestyle='-', alpha=0.7)
-ax1.plot(historical_subset['invoice_period'], historical_subset['actual_undiscounted_price'],
+ax.plot(historical_subset['invoice_period'], historical_subset['actual_undiscounted_price'],
          marker='s', linewidth=2, markersize=6, label='Actual Undiscounted (9.4)',
          color='#70AD47', linestyle='-', alpha=0.7)
 # Forecasts
-ax1.plot(merged['invoice_period'], merged['forecast_discounted_price'],
+ax.plot(merged['invoice_period'], merged['forecast_discounted_price'],
          marker='o', linewidth=2.5, markersize=7, label='Forecast Discounted (11.3)', 
          color='#4472C4', linestyle='--', alpha=1.0)
-ax1.plot(merged['invoice_period'], merged['forecast_undiscounted_price'],
+ax.plot(merged['invoice_period'], merged['forecast_undiscounted_price'],
          marker='s', linewidth=2.5, markersize=7, label='Forecast Undiscounted (11.5)',
          color='#70AD47', linestyle='--', alpha=1.0)
-ax1.set_title('Actual vs Forecast: Discounted and Undiscounted Prices', fontsize=13, fontweight='bold')
-ax1.set_xlabel('Month', fontsize=11)
-ax1.set_ylabel('Monthly Total ($)', fontsize=11)
-ax1.legend(fontsize=9, loc='best')
-ax1.grid(True, alpha=0.3)
-ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax1.tick_params(axis='x', rotation=45)
-ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
+ax.set_title('Actual vs Forecast: Discounted and Undiscounted Prices', fontsize=13, fontweight='bold')
+ax.set_xlabel('Month', fontsize=11)
+ax.set_ylabel('Monthly Total ($)', fontsize=11)
+ax.legend(fontsize=9, loc='best')
+ax.grid(True, alpha=0.3)
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.tick_params(axis='x', rotation=45)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
+
+plt.tight_layout()
+output_viz = VIS_DIR / '11.6_actual_vs_forecast_prices.png'
+plt.savefig(output_viz, dpi=300, bbox_inches='tight')
+print(f"\n✓ Saved visualization: {output_viz.name}")
+plt.close()
 
 # Plot 2: Forecasted discount vs actual discount
-ax2 = axes[0, 1]
+fig, ax = plt.subplots(figsize=(14, 7))
 # Calculate actual discount amounts
 historical_subset['actual_discount_amount'] = (historical_subset['actual_undiscounted_price'] - 
                                                historical_subset['actual_discounted_price'])
 # Forecast discount amounts
 forecast_discount = merged['forecast_undiscounted_price'] - merged['forecast_discounted_price']
-ax2.bar(historical_subset['invoice_period'] - pd.Timedelta(days=5), 
+ax.bar(historical_subset['invoice_period'] - pd.Timedelta(days=5), 
         historical_subset['actual_discount_amount'],
         width=10, label='Actual Discount (9.4)', color='#4472C4', alpha=0.6, edgecolor='black', linewidth=1)
-ax2.bar(merged['invoice_period'] + pd.Timedelta(days=5),
+ax.bar(merged['invoice_period'] + pd.Timedelta(days=5),
         forecast_discount,
         width=10, label='Forecast Discount (11.3/11.5)', color='#C44E52', alpha=0.6, edgecolor='black', linewidth=1)
-ax2.set_title('Actual vs Forecasted Discount Amount', fontsize=13, fontweight='bold')
-ax2.set_xlabel('Month', fontsize=11)
-ax2.set_ylabel('Discount Amount ($)', fontsize=11)
-ax2.legend(fontsize=10)
-ax2.grid(True, alpha=0.3, axis='y')
-ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax2.tick_params(axis='x', rotation=45)
-ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
+ax.set_title('Actual vs Forecasted Discount Amount', fontsize=13, fontweight='bold')
+ax.set_xlabel('Month', fontsize=11)
+ax.set_ylabel('Discount Amount ($)', fontsize=11)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3, axis='y')
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.tick_params(axis='x', rotation=45)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
+
+plt.tight_layout()
+output_viz = VIS_DIR / '11.6_actual_vs_forecast_discount_amount.png'
+plt.savefig(output_viz, dpi=300, bbox_inches='tight')
+print(f"✓ Saved visualization: {output_viz.name}")
+plt.close()
 
 # Plot 3: Actual vs Forecasted discount rate
-ax3 = axes[1, 0]
+fig, ax = plt.subplots(figsize=(14, 7))
 historical_subset['actual_discount_rate'] = (historical_subset['actual_discount_amount'] / 
                                              historical_subset['actual_undiscounted_price'] * 100)
 forecast_discount_rate = (forecast_discount / merged['forecast_undiscounted_price'] * 100)
-ax3.plot(historical_subset['invoice_period'], historical_subset['actual_discount_rate'],
+ax.plot(historical_subset['invoice_period'], historical_subset['actual_discount_rate'],
          marker='o', linewidth=2, markersize=6, label='Actual Discount Rate (9.4)',
          color='#4472C4', linestyle='-')
-ax3.plot(merged['invoice_period'], forecast_discount_rate,
+ax.plot(merged['invoice_period'], forecast_discount_rate,
          marker='s', linewidth=2.5, markersize=7, label='Forecast Discount Rate (11.3/11.5)',
          color='#70AD47', linestyle='--')
-ax3.set_title('Actual vs Forecasted Discount Rate (% of Undiscounted)', fontsize=13, fontweight='bold')
-ax3.set_xlabel('Month', fontsize=11)
-ax3.set_ylabel('Discount Rate (%)', fontsize=11)
-ax3.legend(fontsize=10)
-ax3.grid(True, alpha=0.3)
-ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax3.tick_params(axis='x', rotation=45)
-ax3.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+ax.set_title('Actual vs Forecasted Discount Rate (% of Undiscounted)', fontsize=13, fontweight='bold')
+ax.set_xlabel('Month', fontsize=11)
+ax.set_ylabel('Discount Rate (%)', fontsize=11)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.tick_params(axis='x', rotation=45)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+
+plt.tight_layout()
+output_viz = VIS_DIR / '11.6_actual_vs_forecast_discount_rate.png'
+plt.savefig(output_viz, dpi=300, bbox_inches='tight')
+print(f"✓ Saved visualization: {output_viz.name}")
+plt.close()
 
 # Plot 4: Forecast error analysis
-ax4 = axes[1, 1]
+fig, ax = plt.subplots(figsize=(14, 7))
 # Calculate errors (only for overlapping months)
 error_disc = merged['forecast_discounted_price'].values - merged['forecast_discounted_price'].values  # placeholder
 error_undisc = merged['forecast_undiscounted_price'].values - merged['forecast_undiscounted_price'].values  # placeholder
@@ -264,23 +286,23 @@ error_undisc = merged['forecast_undiscounted_price'].values - merged['forecast_u
 width = 0.35
 x_pos = np.arange(len(merged))
 actual_rates_aligned = historical_subset['actual_discount_rate'].tail(len(merged)).values
-ax4.bar(x_pos - width/2, actual_rates_aligned, width, label='Actual Rate (last months)', 
+ax.bar(x_pos - width/2, actual_rates_aligned, width, label='Actual Rate (last months)', 
         color='#4472C4', alpha=0.7, edgecolor='black', linewidth=1)
-ax4.bar(x_pos + width/2, forecast_discount_rate.values, width, label='Forecast Rate',
+ax.bar(x_pos + width/2, forecast_discount_rate.values, width, label='Forecast Rate',
         color='#70AD47', alpha=0.7, edgecolor='black', linewidth=1)
-ax4.set_title('Discount Rate: Actuals vs Forecasts (Aligned)', fontsize=13, fontweight='bold')
-ax4.set_xlabel('Forecast Month', fontsize=11)
-ax4.set_ylabel('Discount Rate (%)', fontsize=11)
-ax4.set_xticks(x_pos)
-ax4.set_xticklabels([d.strftime('%Y-%m') for d in merged['invoice_period']], rotation=45, ha='right')
-ax4.legend(fontsize=10)
-ax4.grid(True, alpha=0.3, axis='y')
-ax4.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+ax.set_title('Discount Rate: Actuals vs Forecasts (Aligned)', fontsize=13, fontweight='bold')
+ax.set_xlabel('Forecast Month', fontsize=11)
+ax.set_ylabel('Discount Rate (%)', fontsize=11)
+ax.set_xticks(x_pos)
+ax.set_xticklabels([d.strftime('%Y-%m') for d in merged['invoice_period']], rotation=45, ha='right')
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3, axis='y')
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
 
 plt.tight_layout()
-output_png = VIS_DIR / '11.6_forecast_overlay.png'
-plt.savefig(output_png, dpi=300, bbox_inches='tight')
-print(f"\n✓ Saved visualization: {output_png.name}")
+output_viz = VIS_DIR / '11.6_discount_rate_comparison.png'
+plt.savefig(output_viz, dpi=300, bbox_inches='tight')
+print(f"✓ Saved visualization: {output_viz.name}")
 plt.close()
 
 # Save comparison table

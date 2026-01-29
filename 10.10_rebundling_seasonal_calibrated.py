@@ -804,7 +804,7 @@ plt.close()
 
 # 4. Monthly Revenue with Uncertainty Bands
 print("  Creating monthly revenue uncertainty bands...")
-fig, ax = plt.subplots(figsize=(16, 8))
+fig, ax = plt.subplots(figsize=(16, 9))
 
 # Calculate monthly percentiles
 def calculate_monthly_percentiles(monthly_df, percentiles=[0.05, 0.25, 0.50, 0.75, 0.95]):
@@ -818,35 +818,55 @@ monthly_no_stats = calculate_monthly_percentiles(monthly_no_df)
 
 # Plot WITH DISCOUNT uncertainty bands
 ax.fill_between(monthly_with_stats.index, monthly_with_stats[5], monthly_with_stats[95],
-                alpha=0.15, color='#70AD47', label='With Discount 90% CI')
+                alpha=0.15, color='#70AD47', zorder=1)
 ax.fill_between(monthly_with_stats.index, monthly_with_stats[25], monthly_with_stats[75],
-                alpha=0.25, color='#70AD47', label='With Discount 50% CI')
+                alpha=0.25, color='#70AD47', zorder=1)
 
 # Plot NO DISCOUNT uncertainty bands
 ax.fill_between(monthly_no_stats.index, monthly_no_stats[5], monthly_no_stats[95],
-                alpha=0.15, color='#4472C4', label='No Discount 90% CI')
+                alpha=0.15, color='#4472C4', zorder=1)
 ax.fill_between(monthly_no_stats.index, monthly_no_stats[25], monthly_no_stats[75],
-                alpha=0.25, color='#4472C4', label='No Discount 50% CI')
+                alpha=0.25, color='#4472C4', zorder=1)
 
 # Plot median lines on top
 ax.plot(monthly_with_stats.index, monthly_with_stats[50], 
-        color='#70AD47', linewidth=3, label='With Discount (Median)', marker='o', markersize=8)
+        color='#70AD47', linewidth=3.5, label='WITH DISCOUNT', marker='o', markersize=9, zorder=3)
 ax.plot(monthly_no_stats.index, monthly_no_stats[50], 
-        color='#4472C4', linewidth=3, label='No Discount (Median)', marker='s', markersize=8)
+        color='#4472C4', linewidth=3.5, label='NO DISCOUNT', marker='s', markersize=9, zorder=3)
 
 # Add target line
 ax.axhline(TARGET_REVENUE, color='red', linestyle='--', linewidth=2.5, 
-           label=f'Target: ${TARGET_REVENUE:,.0f}', alpha=0.8)
+           label=f'Target: ${TARGET_REVENUE:,.0f}', alpha=0.8, zorder=2)
 
-ax.set_title(f'FY2025 Cumulative Revenue with Uncertainty Bands\n{FY2025_START.strftime("%d/%m/%Y")} - {FY2025_END.strftime("%d/%m/%Y")} ({N_SIMULATIONS} simulations with Rebundling)', 
+# Add revenue labels for final points only
+with_final = monthly_with_stats[50].iloc[-1]
+no_final = monthly_no_stats[50].iloc[-1]
+
+# Format final values with K for <1M, M for >=1M
+def format_revenue(val):
+    if val < 1e6:
+        return f'${val/1e3:.0f}K'
+    else:
+        return f'${val/1e6:.2f}M'
+
+# Add label at end of WITH DISCOUNT
+ax.text(monthly_with_stats.index[-1], with_final + 40000, 
+        f'  {format_revenue(with_final)}', fontsize=12, fontweight='bold', color='#70AD47', va='bottom')
+
+# Add label at end of NO DISCOUNT
+ax.text(monthly_no_stats.index[-1], no_final - 40000, 
+        f'  {format_revenue(no_final)}', fontsize=12, fontweight='bold', color='#4472C4', va='top')
+
+ax.set_title(f'FY2025 Cumulative Revenue Historic Predictions Scaled\n({N_SIMULATIONS} Monte Carlo Sims)', 
              fontsize=16, fontweight='bold', pad=20)
-ax.set_xlabel('Invoice Month', fontsize=14)
-ax.set_ylabel('Cumulative Revenue ($)', fontsize=14)
-ax.legend(loc='upper left', fontsize=11)
+ax.set_xlabel('Invoice Month', fontsize=15, fontweight='bold')
+ax.set_ylabel('Cumulative Revenue ($)', fontsize=15, fontweight='bold')
+ax.legend(loc='upper left', fontsize=13, framealpha=0.95)
 ax.grid(True, alpha=0.3)
 ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax.tick_params(axis='x', rotation=45)
+ax.tick_params(axis='x', rotation=45, labelsize=12)
+ax.tick_params(axis='y', labelsize=12)
 
 plt.tight_layout()
 monthly_output = os.path.join(OUTPUT_DIR, '10.10_MC_monthly_revenue_uncertainty_rebundled.png')

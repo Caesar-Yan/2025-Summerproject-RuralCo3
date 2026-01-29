@@ -46,7 +46,7 @@ INPUT_FILE = BASE_PATH / "visualisations" / "9.4_monthly_totals_Period_4_Entire.
 OUTPUT_PATH = BASE_PATH / "forecast"
 
 # Create output directory if it doesn't exist
-OUTPUT_PATH.mkdir(exist_ok=True)
+OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 # ========================
 # DISPLAY PATH INFO
@@ -55,7 +55,9 @@ print("\n" + "="*80)
 print("PATH CONFIGURATION")
 print("="*80)
 print(f"Base Directory: {BASE_PATH}")
-print(f"Input File: {INPUT_FILE.name}")
+print(f"  (Full resolved path: {BASE_PATH.resolve()})")
+print(f"Output Folder: {OUTPUT_PATH}")
+print(f"  (Full resolved path: {OUTPUT_PATH.resolve()})")
 print(f"Output Folder: {OUTPUT_PATH}")
 print("="*80)
 
@@ -457,81 +459,96 @@ print("\n" + "="*80)
 print("🎨 CREATING VISUALIZATIONS")
 print("="*80)
 
-fig, axes = plt.subplots(2, 2, figsize=(18, 12))
-
-# Plot 1: Historical + Forecast Discount Rate
-ax1 = axes[0, 0]
-ax1.plot(monthly_historical['invoice_period'], monthly_historical['discount_rate'],
+fig, ax = plt.subplots(figsize=(14, 8))
+ax.plot(monthly_historical['invoice_period'], monthly_historical['discount_rate'],
          marker='o', linewidth=2, label='Historical', color='black', alpha=0.7)
-ax1.plot(forecast_df['invoice_period'], forecast_df['forecast_discount_rate'],
+ax.plot(forecast_df['invoice_period'], forecast_df['forecast_discount_rate'],
          marker='s', linewidth=2.5, linestyle='--', label='Forecast',
          color='#4472C4', markersize=8)
 
 # Add historical average line
 hist_avg = monthly_historical['discount_rate'].mean()
-ax1.axhline(y=hist_avg, color='gray', linestyle=':', linewidth=2, alpha=0.5,
+ax.axhline(y=hist_avg, color='gray', linestyle=':', linewidth=2, alpha=0.5,
             label=f'Historical Avg: {hist_avg:.2f}%')
 
 # Add forecast start line
 last_date = monthly_historical['invoice_period'].max()
-ax1.axvline(x=last_date, color='red', linestyle='--', linewidth=2, alpha=0.5, 
+ax.axvline(x=last_date, color='red', linestyle='--', linewidth=2, alpha=0.5, 
             label='Forecast Start')
 
-ax1.set_title('Discount Rate - Historical & Forecast\n(Percentage above 100%)', 
+ax.set_title('Discount Rate - Historical & Forecast\n(Percentage above 100%)', 
               fontsize=14, fontweight='bold')
-ax1.set_xlabel('Period', fontsize=12)
-ax1.set_ylabel('Discount Rate (%)', fontsize=12)
-ax1.legend(fontsize=10)
-ax1.grid(True, alpha=0.3)
-ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
-ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax1.tick_params(axis='x', rotation=45)
+ax.set_xlabel('Period', fontsize=12)
+ax.set_ylabel('Discount Rate (%)', fontsize=12)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.tick_params(axis='x', rotation=45)
+
+plt.tight_layout()
+output_viz_1 = OUTPUT_PATH / '11.4_discount_rate_forecast.png'
+plt.savefig(output_viz_1, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {output_viz_1.name}")
+plt.close()
 
 # Plot 2: Model Fit Quality
-ax2 = axes[0, 1]
+fig, ax = plt.subplots(figsize=(10, 8))
 actual = y_discount_rate
 predicted = best_model_info['predictions']
-ax2.scatter(actual, predicted, alpha=0.6, s=100, edgecolors='black', linewidths=1)
+ax.scatter(actual, predicted, alpha=0.6, s=100, edgecolors='black', linewidths=1)
 min_val = min(actual.min(), predicted.min())
 max_val = max(actual.max(), predicted.max())
-ax2.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Prediction')
-ax2.set_title(f'Model Fit: {best_model_name}\nR² = {best_model_info["r2"]:.4f}, MAE = {best_model_info["mae"]:.4f}%',
+ax.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Prediction')
+ax.set_title(f'Model Fit: {best_model_name}\nR² = {best_model_info["r2"]:.4f}, MAE = {best_model_info["mae"]:.4f}%',
               fontsize=14, fontweight='bold')
-ax2.set_xlabel('Actual Discount Rate (%)', fontsize=12)
-ax2.set_ylabel('Predicted Discount Rate (%)', fontsize=12)
-ax2.legend(fontsize=10)
-ax2.grid(True, alpha=0.3)
-ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
-ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+ax.set_xlabel('Actual Discount Rate (%)', fontsize=12)
+ax.set_ylabel('Predicted Discount Rate (%)', fontsize=12)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+
+plt.tight_layout()
+output_viz_2 = OUTPUT_PATH / '11.4_model_fit_quality.png'
+plt.savefig(output_viz_2, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {output_viz_2.name}")
+plt.close()
 
 # Plot 3: Residuals over time
-ax3 = axes[1, 0]
+fig, ax = plt.subplots(figsize=(14, 6))
 residuals = y_discount_rate - best_model_info['predictions']
-ax3.scatter(monthly_historical['invoice_period'], residuals, alpha=0.6, s=80, 
+ax.scatter(monthly_historical['invoice_period'], residuals, alpha=0.6, s=80, 
             edgecolors='black', linewidths=1, color='coral')
-ax3.axhline(y=0, color='red', linestyle='--', linewidth=2, alpha=0.5)
-ax3.fill_between(monthly_historical['invoice_period'], residuals, 0, alpha=0.3, color='coral')
-ax3.set_title('Model Residuals Over Time', fontsize=14, fontweight='bold')
-ax3.set_xlabel('Period', fontsize=12)
-ax3.set_ylabel('Residual (Actual - Predicted) (%)', fontsize=12)
-ax3.grid(True, alpha=0.3)
-ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax3.tick_params(axis='x', rotation=45)
+ax.axhline(y=0, color='red', linestyle='--', linewidth=2, alpha=0.5)
+ax.fill_between(monthly_historical['invoice_period'], residuals, 0, alpha=0.3, color='coral')
+ax.set_title('Model Residuals Over Time', fontsize=14, fontweight='bold')
+ax.set_xlabel('Period', fontsize=12)
+ax.set_ylabel('Residual (Actual - Predicted) (%)', fontsize=12)
+ax.grid(True, alpha=0.3)
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.tick_params(axis='x', rotation=45)
 
 # Add statistics text
 residual_mean = residuals.mean()
 residual_std = residuals.std()
-ax3.text(0.02, 0.98, f'Mean: {residual_mean:.3f}%\nStd: {residual_std:.3f}%',
-         transform=ax3.transAxes, fontsize=10, verticalalignment='top',
+ax.text(0.02, 0.98, f'Mean: {residual_mean:.3f}%\nStd: {residual_std:.3f}%',
+         transform=ax.transAxes, fontsize=10, verticalalignment='top',
          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
 
+plt.tight_layout()
+output_viz_3 = OUTPUT_PATH / '11.4_residuals_over_time.png'
+plt.savefig(output_viz_3, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {output_viz_3.name}")
+plt.close()
+
 # Plot 4: Discount Rate vs Invoice Count
-ax4 = axes[1, 1]
+fig, ax = plt.subplots(figsize=(10, 8))
 # Show relationship between invoice count and discount rate
-ax4.scatter(monthly_historical['n_invoices'], monthly_historical['discount_rate'],
+ax.scatter(monthly_historical['n_invoices'], monthly_historical['discount_rate'],
             alpha=0.6, s=100, edgecolors='black', linewidths=1, color='#70AD47',
             label='Historical')
-ax4.scatter(forecast_df['forecast_invoice_count'], forecast_df['forecast_discount_rate'],
+ax.scatter(forecast_df['forecast_invoice_count'], forecast_df['forecast_discount_rate'],
             alpha=0.8, s=120, edgecolors='black', linewidths=2, color='#FFC000',
             marker='s', label='Forecast')
 
@@ -543,22 +560,22 @@ slope, intercept, r_value, p_value, std_err = scipy_stats.linregress(
 line_x = np.array([monthly_historical['n_invoices'].min(), 
                    monthly_historical['n_invoices'].max()])
 line_y = slope * line_x + intercept
-ax4.plot(line_x, line_y, 'r--', linewidth=2, alpha=0.5, 
+ax.plot(line_x, line_y, 'r--', linewidth=2, alpha=0.5, 
          label=f'Trend (R={r_value:.3f})')
 
-ax4.set_title('Discount Rate vs Invoice Count\n(All models use invoice count)', 
+ax.set_title('Discount Rate vs Invoice Count\n(All models use invoice count)', 
               fontsize=14, fontweight='bold')
-ax4.set_xlabel('Invoice Count', fontsize=12)
-ax4.set_ylabel('Discount Rate (%)', fontsize=12)
-ax4.legend(fontsize=10)
-ax4.grid(True, alpha=0.3)
-ax4.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
-ax4.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:,.0f}'))
+ax.set_xlabel('Invoice Count', fontsize=12)
+ax.set_ylabel('Discount Rate (%)', fontsize=12)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:,.0f}'))
 
 plt.tight_layout()
-output_viz = OUTPUT_PATH / '11.4_discount_rate_forecast_visualization.png'
-plt.savefig(output_viz, dpi=300, bbox_inches='tight')
-print(f"  ✓ Saved: {output_viz.name}")
+output_viz_4 = OUTPUT_PATH / '11.4_discount_rate_vs_invoice_count.png'
+plt.savefig(output_viz_4, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {output_viz_4.name}")
 plt.close()
 
 # ================================================================

@@ -1,27 +1,27 @@
 """
-15.6_bootstrap_with_discount_rate_forecast
+15.6.1_bootstrap_with_undiscounted_forecast
 
-Bootstrap revenue estimation using discount rate forecast from 11.4.
+Bootstrap revenue estimation using forecasted undiscounted amounts from 11.5.
 
-Instead of using 11.5's constant multiplier approach, this script:
-1. Loads 11.3 (discounted) and 11.4 (discount_rate) forecasts
-2. Calculates undiscounted as: undiscounted = discounted × (1 + discount_rate/100)
+Unlike 15.6 which derives undiscounted amounts from a discount rate forecast, this script:
+1. Loads 11.3 (discounted) and 11.5 (undiscounted) forecasts directly
+2. Uses forecasted undiscounted amounts without any rate-based calculations
 3. For each bootstrap iteration:
    - Adds random noise to discounted forecast (from 11.3 residuals)
-   - Adds random noise to discount_rate forecast (from 11.4 residuals)
-   - Recalculates undiscounted amounts
+   - Adds random noise to undiscounted forecast (from 11.5 residuals)
    - Allocates forecasted totals to deciles using pct_of_total_value
    - Applies decile payment profiles + seasonal calibration
    - Calculates revenue components (interest on discounted/undiscounted, retained discounts)
 4. Aggregates per-iteration results: mean and 95% CI per month
 5. Generates cumulative last-12-months plot
 
-This approach should give more realistic undiscounted values than 11.5's constant multiplier.
+This approach is simpler and faster than 15.6, using 11.5's direct undiscounted forecast
+instead of a rate-based multiplier. Both use the same bootstrap and revenue allocation logic.
 
 Inputs:
 -------
 - visualisations/11.3_forecast_next_15_months.csv (discounted forecast)
-- forecast/11.4_forecast_discount_rate_15_months.csv (discount rate forecast)
+- forecast/11.5_forecast_undiscounted_amount_15_months.csv (undiscounted forecast)
 - payment_profile/decile_payment_profile.pkl
 - visualisations/09.6_reconstructed_late_payment_rates.csv
 - visualisations/10.6_calibrated_baseline_late_rate.csv
@@ -29,9 +29,10 @@ Inputs:
 
 Outputs:
 --------
-- forecast/15.6_bootstrap_component_summary.csv (mean and CI)
-- forecast/15.6_cumulative_revenue_last_12_months.png
-- forecast/15.6_discount_rate_comparison.png (comparing approaches)
+- forecast/15.6.1_bootstrap_component_summary.csv (mean and CI)
+- forecast/15.6.1_cumulative_revenue_last_12_months.png
+- forecast/15.6.1_cumulative_revenue_with_ci_last_12_months.png
+- forecast/15.6.1_undiscounted_comparison.png (comparing approaches)
 """
 
 import pandas as pd
@@ -211,9 +212,9 @@ def main():
         RUNS = 100
     
     print('\n' + '='*80)
-    print('15.6 BOOTSTRAP WITH DISCOUNT RATE FORECAST')
+    print('15.6.1 BOOTSTRAP WITH UNDISCOUNTED FORECAST')
     print('='*80)
-    print(f'\nUsing discount rate forecast from 11.4 (not constant multiplier)')
+    print(f'\nUsing forecasted undiscounted amounts from 11.5 directly')
     print(f'Running {RUNS} bootstrap iterations...\n')
     
     # ================================================================
@@ -232,40 +233,31 @@ def main():
     
     print(f'✓ Loaded 11.3 discounted forecast: {len(f11_3)} months')
     
-    # Load 11.4 discount rate forecast
-    f11_4_path = FORECAST_DIR / '11.4_forecast_discount_rate_15_months.csv'
-    if not f11_4_path.exists():
-        f11_4_path = ALT_FORECAST / '11.4_forecast_discount_rate_15_months.csv'
-    f11_4 = pd.read_csv(f11_4_path)
-    f11_4['invoice_period'] = ensure_datetime_series(f11_4['invoice_period'])
+    # Load 11.5 undiscounted forecast
+    f11_5_path = FORECAST_DIR / '11.5_forecast_undiscounted_next_15_months.csv'
+    if not f11_5_path.exists():
+        f11_5_path = ALT_FORECAST / '11.5_forecast_undiscounted_next_15_months.csv'
+    f11_5 = pd.read_csv(f11_5_path)
+    f11_5['invoice_period'] = ensure_datetime_series(f11_5['invoice_period'])
     
-    print(f'✓ Loaded 11.4 discount rate forecast: {len(f11_4)} months')
-    print(f'  Discount rate range: {f11_4["forecast_discount_rate"].min():.2f}% - {f11_4["forecast_discount_rate"].max():.2f}%')
-    print(f'  Discount rate mean: {f11_4["forecast_discount_rate"].mean():.2f}%')
+    print(f'✓ Loaded 11.5 undiscounted forecast: {len(f11_5)} months')
     
     # Merge forecasts
     forecast_df = f11_3[['invoice_period', 'forecast_discounted_price']].merge(
-        f11_4[['invoice_period', 'forecast_discount_rate']],
+        f11_5[['invoice_period', 'forecast_undiscounted_price']],
         on='invoice_period',
         how='inner'
     )
     
     if forecast_df.empty:
-        raise SystemExit('No matching forecast periods between 11.3 and 11.4')
+        raise SystemExit('No matching forecast periods between 11.3 and 11.5')
     
     forecast_df = forecast_df.sort_values('invoice_period').reset_index(drop=True)
-    
-    # Calculate undiscounted using discount rate
-    # undiscounted = discounted × (1 + discount_rate/100)
-    # or equivalently: undiscounted = discounted × (undiscounted_as_pct/100)
-    forecast_df['forecast_undiscounted_price'] = forecast_df['forecast_discounted_price'] * (
-        1 + forecast_df['forecast_discount_rate'] / 100
-    )
     
     n_months = len(forecast_df)
     
     print(f'\n✓ Merged forecasts: {n_months} months')
-    print(f'\nCalculated undiscounted prices using discount rate:')
+    print(f'\nForecasted amounts:')
     print(f'  Discounted range: ${forecast_df["forecast_discounted_price"].min():,.0f} - ${forecast_df["forecast_discounted_price"].max():,.0f}')
     print(f'  Undiscounted range: ${forecast_df["forecast_undiscounted_price"].min():,.0f} - ${forecast_df["forecast_undiscounted_price"].max():,.0f}')
     print(f'  Implied multiplier range: {(forecast_df["forecast_undiscounted_price"]/forecast_df["forecast_discounted_price"]).min():.3f} - {(forecast_df["forecast_undiscounted_price"]/forecast_df["forecast_discounted_price"]).max():.3f}')
@@ -318,14 +310,14 @@ def main():
     if std_disc == 0:
         std_disc = forecast_df['forecast_discounted_price'].mean() * 0.05
     
-    # For discount rate: use std deviation of forecast
-    std_rate = forecast_df['forecast_discount_rate'].std()
-    if std_rate == 0:
-        std_rate = forecast_df['forecast_discount_rate'].mean() * 0.05
+    # For undiscounted: use std deviation of forecast
+    std_undisc = forecast_df['forecast_undiscounted_price'].std()
+    if std_undisc == 0:
+        std_undisc = forecast_df['forecast_undiscounted_price'].mean() * 0.05
     
     print(f'Estimated forecast uncertainty:')
     print(f'  Discounted price std: ${std_disc:,.0f}')
-    print(f'  Discount rate std: {std_rate:.2f} percentage points')
+    print(f'  Undiscounted price std: ${std_undisc:,.0f}')
     print(f'\nThis will be used to generate bootstrap perturbations')
     
     # ================================================================
@@ -346,15 +338,12 @@ def main():
     rng = np.random.default_rng(42)
     
     for it in range(RUNS):
-        # Generate perturbed forecasts
+        # Generate perturbed forecasts independently
         noise_disc = rng.normal(0, std_disc, n_months)
-        noise_rate = rng.normal(0, std_rate, n_months)
+        noise_undisc = rng.normal(0, std_undisc, n_months)
         
         perturbed_disc = np.maximum(forecast_df['forecast_discounted_price'].values + noise_disc, 0)
-        perturbed_rate = np.maximum(forecast_df['forecast_discount_rate'].values + noise_rate, 0)
-        
-        # Calculate perturbed undiscounted using perturbed rate
-        perturbed_undisc = perturbed_disc * (1 + perturbed_rate / 100)
+        perturbed_undisc = np.maximum(forecast_df['forecast_undiscounted_price'].values + noise_undisc, 0)
         
         # Store multipliers for analysis
         arr_multipliers[it, :] = perturbed_undisc / np.maximum(perturbed_disc, 1)
@@ -411,7 +400,7 @@ def main():
     summary_df = pd.DataFrame(stats)
     
     # Save summary
-    out_csv = ALT_VIS / '15.6_bootstrap_component_summary.csv'
+    out_csv = ALT_VIS / '15.6.1_bootstrap_component_summary.csv'
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     summary_df.to_csv(out_csv, index=False)
     print(f'✓ Saved summary: {out_csv.name}')
@@ -488,7 +477,7 @@ def main():
     ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc, f'  ${final_undisc/1e6:.2f}M',
             fontsize=10, fontweight='bold', color='#70AD47', va='center')
     
-    ax.set_title('Forecasted Revenue: Jan 2026 - Jan 2027\n(Using Discount Rate Forecast)', 
+    ax.set_title('Forecasted Revenue: Jan 2026 - Jan 2027\n(Using Undiscounted Forecast from 11.5)', 
                  fontsize=14, fontweight='bold')
     ax.set_xlabel('Month', fontsize=12)
     ax.set_ylabel('Cumulative Revenue ($)', fontsize=12)
@@ -498,24 +487,7 @@ def main():
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
     ax.legend(fontsize=11, loc='upper left', framealpha=0.95)
     
-    # # Add summary statistics box
-    # summary_text = (
-    #     f'WITH DISCOUNT:\n'
-    #     f'  Mean: ${with_disc["mean_total"].sum():,.0f}\n'
-    #     f'  95% CI: [${with_disc["lower_95_"].sum():,.0f}, ${with_disc["upper_95_"].sum():,.0f}]\n\n'
-    #     f'NO DISCOUNT:\n'
-    #     f'  Mean: ${no_disc["mean_total"].sum():,.0f}\n'
-    #     f'  95% CI: [${no_disc["lower_95_"].sum():,.0f}, ${no_disc["upper_95_"].sum():,.0f}]\n\n'
-    #     f'Ratio: {ratio:.2f}x\n\n'
-    #     f'Using discount rate from 11.4\n'
-    #     f'(not constant multiplier)'
-    # )
-    # ax.text(0.98, 0.40, summary_text, transform=ax.transAxes, fontsize=9,
-    #         verticalalignment='top', horizontalalignment='right',
-    #         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
-    #         family='monospace')
-    
-    out_png = ALT_VIS / '15.6_cumulative_revenue_last_12_months.png'
+    out_png = ALT_VIS / '15.6.1_cumulative_revenue_last_12_months.png'
     out_png.parent.mkdir(parents=True, exist_ok=True)
     plt.tight_layout()
     plt.savefig(out_png, dpi=300)
@@ -552,7 +524,7 @@ def main():
     ax.plot(last_undisc['invoice_period'], undisc_cumsum_mean,
             marker='s', linewidth=3, markersize=9, color='#70AD47', label='NO DISCOUNT', zorder=3)
     ax.fill_between(last_undisc['invoice_period'], undisc_cumsum_lower, undisc_cumsum_upper,
-                    alpha=0.2, color='#70AD47', zorder=1, label='_nolegend_')
+                    alpha=0.2, color='#70AD47', zorder=1)
     
     # Add final value annotations with revenue figures along the lines
     final_disc = disc_cumsum_mean.iloc[-1]
@@ -573,23 +545,17 @@ def main():
             return f'${val/1e6:.2f}M'
     
     ax.text(last_disc['invoice_period'].iloc[-1], final_disc, 
-            f'  {format_revenue(final_disc)}',
-            fontsize=14, fontweight='bold', color='#4472C4', va='center')
-    ax.text(last_disc['invoice_period'].iloc[-1], final_disc * 0.85, 
-            f'  [{format_ci(final_disc_lower)}, {format_ci(final_disc_upper)}]',
-            fontsize=11, fontweight='normal', color='#4472C4', va='center')
+            f'  {format_revenue(final_disc)}\n  [{format_ci(final_disc_lower)}, {format_ci(final_disc_upper)}]',
+            fontsize=11, fontweight='bold', color='#4472C4', va='center')
     
     final_undisc = undisc_cumsum_mean.iloc[-1]
     final_undisc_lower = undisc_cumsum_lower.iloc[-1]
     final_undisc_upper = undisc_cumsum_upper.iloc[-1]
     ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc, 
-            f'  {format_revenue(final_undisc)}',
-            fontsize=14, fontweight='bold', color='#70AD47', va='center')
-    ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc * 0.92, 
-            f'  [{format_ci(final_undisc_lower)}, {format_ci(final_undisc_upper)}]',
-            fontsize=11, fontweight='normal', color='#70AD47', va='center')
+            f'  {format_revenue(final_undisc)}\n  [{format_ci(final_undisc_lower)}, {format_ci(final_undisc_upper)}]',
+            fontsize=11, fontweight='bold', color='#70AD47', va='center')
     
-    ax.set_title('Forecasted Revenue: Jan 2026 - Jan 2027 \n(Using Discount Rate Forecast)', 
+    ax.set_title('Forecasted Revenue: Jan 2026 - Jan 2027 (with 95% Confidence Intervals)\n(Using Undiscounted Forecast from 11.5)', 
                  fontsize=16, fontweight='bold')
     ax.set_xlabel('Month', fontsize=14, fontweight='bold')
     ax.set_ylabel('Cumulative Revenue ($)', fontsize=14, fontweight='bold')
@@ -600,7 +566,7 @@ def main():
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
     ax.legend(fontsize=13, loc='upper left', framealpha=0.95)
     
-    out_png_ci = ALT_VIS / '15.6_cumulative_revenue_with_ci_last_12_months.png'
+    out_png_ci = ALT_VIS / '15.6.1_cumulative_revenue_with_ci_last_12_months.png'
     out_png_ci.parent.mkdir(parents=True, exist_ok=True)
     plt.tight_layout()
     plt.savefig(out_png_ci, dpi=300)
@@ -608,11 +574,11 @@ def main():
     plt.close()
     
     # ====================
-    # Plot 2: Multiplier distribution comparison
+    # Plot 2: Undiscounted amounts comparison
     # ====================
     fig, axes = plt.subplots(2, 1, figsize=(14, 10))
     
-    # Top panel: Multiplier distribution over iterations (all months)
+    # Top panel: Undiscounted amount distribution over iterations (all months)
     ax1 = axes[0]
     
     multiplier_means = arr_multipliers.mean(axis=0)
@@ -622,7 +588,7 @@ def main():
     ax1.plot(forecast_df['invoice_period'], multiplier_means,
              marker='o', linewidth=2.5, markersize=8, color='#4472C4', label='Mean Multiplier')
     ax1.fill_between(forecast_df['invoice_period'], multiplier_lower, multiplier_upper,
-                     alpha=0.3, color='#4472C4', label='95% CI')
+                     alpha=0.3, color='#4472C4', label='95% CI (Bootstrap)')
     
     # Add historical average line for reference
     hist_path = VIS_DIR / '9.4_monthly_totals_Period_4_Entire.csv'
@@ -636,7 +602,7 @@ def main():
             ax1.axhline(y=hist_avg, color='red', linestyle='--', linewidth=2, alpha=0.5,
                        label=f'Historical Avg: {hist_avg:.3f}')
     
-    ax1.set_title('Undiscounted/Discounted Multiplier\n(Derived from 11.4 Discount Rate Forecast)', 
+    ax1.set_title('Undiscounted/Discounted Multiplier\n(From 11.5 Forecasted Amounts)', 
                  fontsize=14, fontweight='bold')
     ax1.set_xlabel('Month', fontsize=12)
     ax1.set_ylabel('Multiplier', fontsize=12)
@@ -645,38 +611,31 @@ def main():
     ax1.tick_params(axis='x', rotation=45)
     ax1.legend(fontsize=10)
     
-    # Bottom panel: Discount rate over time
+    # Bottom panel: Forecasted undiscounted vs discounted amounts
     ax2 = axes[1]
     
-    ax2.plot(forecast_df['invoice_period'], forecast_df['forecast_discount_rate'],
-             marker='o', linewidth=2.5, markersize=8, color='#70AD47', label='Forecast Discount Rate')
+    ax2.plot(forecast_df['invoice_period'], forecast_df['forecast_discounted_price'],
+             marker='o', linewidth=2.5, markersize=8, color='#4472C4', label='Discounted (11.3)')
+    ax2.plot(forecast_df['invoice_period'], forecast_df['forecast_undiscounted_price'],
+             marker='s', linewidth=2.5, markersize=8, color='#70AD47', label='Undiscounted (11.5)')
     
-    # Add bootstrap uncertainty
-    rate_means = np.zeros(n_months)
-    rate_lower = np.zeros(n_months)
-    rate_upper = np.zeros(n_months)
+    # Shade the difference
+    ax2.fill_between(forecast_df['invoice_period'], 
+                     forecast_df['forecast_discounted_price'],
+                     forecast_df['forecast_undiscounted_price'],
+                     alpha=0.2, color='orange', label='Discount Amount')
     
-    for j in range(n_months):
-        # Reconstruct discount rate from multipliers
-        rates_iter = (arr_multipliers[:, j] - 1) * 100
-        rate_means[j] = rates_iter.mean()
-        rate_lower[j] = np.percentile(rates_iter, 2.5)
-        rate_upper[j] = np.percentile(rates_iter, 97.5)
-    
-    ax2.fill_between(forecast_df['invoice_period'], rate_lower, rate_upper,
-                     alpha=0.3, color='#70AD47', label='95% CI (Bootstrap)')
-    
-    ax2.set_title('Discount Rate Forecast (from 11.4)', fontsize=14, fontweight='bold')
+    ax2.set_title('Forecasted Discounted vs Undiscounted Amounts', fontsize=14, fontweight='bold')
     ax2.set_xlabel('Month', fontsize=12)
-    ax2.set_ylabel('Discount Rate (%)', fontsize=12)
+    ax2.set_ylabel('Amount ($)', fontsize=12)
     ax2.grid(True, alpha=0.3)
     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     ax2.tick_params(axis='x', rotation=45)
-    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}%'))
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
     ax2.legend(fontsize=10)
     
     plt.tight_layout()
-    out_png2 = ALT_VIS / '15.6_discount_rate_comparison.png'
+    out_png2 = ALT_VIS / '15.6.1_undiscounted_comparison.png'
     plt.savefig(out_png2, dpi=300)
     print(f'✓ Saved comparison plot: {out_png2.name}')
     plt.close()
@@ -685,27 +644,28 @@ def main():
     # FINAL SUMMARY
     # ================================================================
     print('\n' + '='*80)
-    print('✅ BOOTSTRAP COMPLETE (15.6)')
+    print('✅ BOOTSTRAP COMPLETE (15.6.1)')
     print('='*80)
     
-    print(f'\nKey Differences from 15.5:')
-    print(f'  • Uses discount rate forecast from 11.4 (not constant multiplier from 11.5)')
-    print(f'  • Undiscounted = Discounted × (1 + discount_rate/100)')
-    print(f'  • Captures time-varying discount behavior')
-    print(f'  • Should give more realistic undiscounted estimates')
+    print(f'\nKey Differences from 15.6:')
+    print(f'  • Uses forecasted undiscounted amounts from 11.5 directly')
+    print(f'  • No discount rate forecast needed (simpler approach)')
+    print(f'  • Both discounted and undiscounted perturbed independently')
+    print(f'  • Avoids rate-based derivation and potential multiplier issues')
     
     print(f'\nAverage implied multiplier: {multiplier_means.mean():.3f}')
     print(f'Multiplier range: {multiplier_means.min():.3f} - {multiplier_means.max():.3f}')
     
     print(f'\n📁 Output Files:')
-    print(f'  • 15.6_bootstrap_component_summary.csv - Monthly revenue summary')
-    print(f'  • 15.6_cumulative_revenue_last_12_months.png - Revenue scenarios')
-    print(f'  • 15.6_discount_rate_comparison.png - Multiplier and rate analysis')
+    print(f'  • 15.6.1_bootstrap_component_summary.csv - Monthly revenue summary')
+    print(f'  • 15.6.1_cumulative_revenue_last_12_months.png - Revenue scenarios')
+    print(f'  • 15.6.1_cumulative_revenue_with_ci_last_12_months.png - With confidence intervals')
+    print(f'  • 15.6.1_undiscounted_comparison.png - Multiplier and amount analysis')
     
     print('\n' + '='*80)
     print('NEXT STEPS:')
-    print('  1. Compare 15.6 results with 15.5 to see impact of discount rate approach')
-    print('  2. Validate that NO_DISCOUNT scenario is now more realistic')
+    print('  1. Compare 15.6.1 results with 15.6 to see impact of different approaches')
+    print('  2. Check that both methods give consistent undiscounted/discounted ratios')
     print('  3. Use preferred approach for final revenue projections')
     print('='*80)
 

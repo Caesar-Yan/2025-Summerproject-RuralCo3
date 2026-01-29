@@ -52,7 +52,7 @@ INPUT_FILE = BASE_PATH / "visualisations" / "9.4_monthly_totals_Period_4_Entire.
 OUTPUT_PATH = BASE_PATH / "visualisations"
 
 # Create output directory if it doesn't exist
-OUTPUT_PATH.mkdir(exist_ok=True)
+OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 # ========================
 # DISPLAY PATH INFO
@@ -61,8 +61,10 @@ print("\n" + "="*80)
 print("PATH CONFIGURATION")
 print("="*80)
 print(f"Base Directory: {BASE_PATH}")
+print(f"  (Full resolved path: {BASE_PATH.resolve()})")
 print(f"Input File: {INPUT_FILE.name}")
 print(f"Output Folder: {OUTPUT_PATH}")
+print(f"  (Full resolved path: {OUTPUT_PATH.resolve()})")
 print("="*80)
 
 # Check if input file exists
@@ -723,94 +725,123 @@ print("\n" + "="*80)
 print("🎨 [Step 7/7] CREATING VISUALIZATIONS")
 print("="*80)
 
-fig, axes = plt.subplots(2, 2, figsize=(18, 12))
-
-# Plot 1: Historical + Forecast Discounted Price
-ax1 = axes[0, 0]
-ax1.plot(monthly_historical['invoice_period'], monthly_historical['total_discounted_price'],
+fig, ax = plt.subplots(figsize=(14, 7))
+ax.plot(monthly_historical['invoice_period'], monthly_historical['total_discounted_price'],
          marker='o', linewidth=2, label='Historical (Discounted)', color='black', alpha=0.7)
-ax1.plot(forecast_df['invoice_period'], forecast_df['forecast_discounted_price'],
+ax.plot(forecast_df['invoice_period'], forecast_df['forecast_discounted_price'],
          marker='s', linewidth=2.5, linestyle='--', label='Forecast (Discounted)',
          color='#4472C4', markersize=8)
-ax1.axvline(x=last_date, color='red', linestyle='--', linewidth=2, alpha=0.5, label='Forecast Start')
-ax1.set_title('Monthly Discounted Price - Historical & Forecast', fontsize=14, fontweight='bold')
-ax1.set_xlabel('Period', fontsize=12)
-ax1.set_ylabel('Discounted Price ($)', fontsize=12)
-ax1.legend(fontsize=10)
-ax1.grid(True, alpha=0.3)
-ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax1.tick_params(axis='x', rotation=45)
-
-# Plot 2: Model Fit Quality - Discounted Price
-ax2 = axes[0, 1]
-actual = y_discounted
-predicted = best_model_info_discounted['predictions']
-ax2.scatter(actual, predicted, alpha=0.6, s=100, edgecolors='black', linewidths=1)
-min_val = min(actual.min(), predicted.min())
-max_val = max(actual.max(), predicted.max())
-ax2.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Prediction')
-ax2.set_title(f'Model Fit (Discounted Price): {best_model_name_discounted}\nR² = {best_model_info_discounted["r2"]:.4f}',
-              fontsize=14, fontweight='bold')
-ax2.set_xlabel('Actual Discounted Price ($)', fontsize=12)
-ax2.set_ylabel('Predicted Discounted Price ($)', fontsize=12)
-ax2.legend(fontsize=10)
-ax2.grid(True, alpha=0.3)
-ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-
-# Plot 3: Invoice Count - Historical + Forecast
-ax3 = axes[1, 0]
-ax3.plot(monthly_historical['invoice_period'], monthly_historical['n_invoices'],
-         marker='o', linewidth=2, label='Historical', color='black', alpha=0.7)
-ax3.plot(forecast_df['invoice_period'], forecast_df['forecast_invoice_count'],
-         marker='s', linewidth=2.5, linestyle='--', label='Forecast',
-         color='#FFC000', markersize=8)
-ax3.axvline(x=last_date, color='red', linestyle='--', linewidth=2, alpha=0.5)
-ax3.set_title(f'Monthly Invoice Count\n(Used as Feature in Discounted Price Model)', 
-              fontsize=14, fontweight='bold')
-ax3.set_xlabel('Period', fontsize=12)
-ax3.set_ylabel('Invoice Count', fontsize=12)
-ax3.legend(fontsize=10)
-ax3.grid(True, alpha=0.3)
-ax3.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:,.0f}'))
-ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax3.tick_params(axis='x', rotation=45)
-
-# Plot 4: Average Price per Invoice
-ax4 = axes[1, 1]
-historical_avg_price = monthly_historical['total_discounted_price'] / monthly_historical['n_invoices']
-ax4.plot(monthly_historical['invoice_period'], historical_avg_price,
-         marker='o', linewidth=2, label='Historical', color='#70AD47', alpha=0.7)
-ax4.plot(forecast_df['invoice_period'], forecast_df['forecast_avg_price_per_invoice'],
-         marker='s', linewidth=2.5, linestyle='--', label='Forecast',
-         color='#A9D18E', markersize=8)
-ax4.axvline(x=last_date, color='red', linestyle='--', linewidth=2, alpha=0.5)
-avg_historical_price = historical_avg_price.mean()
-ax4.axhline(y=avg_historical_price, color='#70AD47', linestyle=':', linewidth=2, alpha=0.5,
-            label=f'Historical Avg: ${avg_historical_price:,.2f}')
-ax4.set_title('Average Price per Invoice', fontsize=14, fontweight='bold')
-ax4.set_xlabel('Period', fontsize=12)
-ax4.set_ylabel('Avg Price per Invoice ($)', fontsize=12)
-ax4.legend(fontsize=10)
-ax4.grid(True, alpha=0.3)
-ax4.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-ax4.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-ax4.tick_params(axis='x', rotation=45)
+ax.axvline(x=last_date, color='red', linestyle='--', linewidth=2, alpha=0.5, label='Forecast Start')
+ax.set_title('Monthly Discounted Price - Historical & Forecast', fontsize=14, fontweight='bold')
+ax.set_xlabel('Period', fontsize=12)
+ax.set_ylabel('Discounted Price ($)', fontsize=12)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.tick_params(axis='x', rotation=45)
 
 plt.tight_layout()
-output_viz = OUTPUT_PATH / '11.3_forecast_visualization.png'
+output_viz = OUTPUT_PATH / '11.3_discounted_price_forecast.png'
 try:
     plt.savefig(output_viz, dpi=300, bbox_inches='tight')
     print(f"  ✓ Saved: {output_viz.name}")
 except Exception as e:
-    # Fallback: save to current working directory if network drive fails
-    fallback_path = Path.cwd() / '11.3_forecast_visualization.png'
+    fallback_path = Path.cwd() / '11.3_discounted_price_forecast.png'
     try:
         plt.savefig(fallback_path, dpi=300, bbox_inches='tight')
         print(f"  ⚠️ Failed saving to {output_viz}; saved visualization locally as: {fallback_path.name}")
     except Exception as e2:
         print(f"  ⚠️ Failed to save visualization to both OUTPUT_PATH and local cwd: {e}; {e2}")
+plt.close()
+
+# Plot 2: Model Fit Quality - Discounted Price
+fig, ax = plt.subplots(figsize=(10, 8))
+actual = y_discounted
+predicted = best_model_info_discounted['predictions']
+ax.scatter(actual, predicted, alpha=0.6, s=100, edgecolors='black', linewidths=1)
+min_val = min(actual.min(), predicted.min())
+max_val = max(actual.max(), predicted.max())
+ax.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Prediction')
+ax.set_title(f'Model Fit (Discounted Price): {best_model_name_discounted}\nR² = {best_model_info_discounted["r2"]:.4f}',
+              fontsize=14, fontweight='bold')
+ax.set_xlabel('Actual Discounted Price ($)', fontsize=12)
+ax.set_ylabel('Predicted Discounted Price ($)', fontsize=12)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+
+plt.tight_layout()
+output_viz = OUTPUT_PATH / '11.3_model_fit_discounted_price.png'
+try:
+    plt.savefig(output_viz, dpi=300, bbox_inches='tight')
+    print(f"  ✓ Saved: {output_viz.name}")
+except Exception as e:
+    fallback_path = Path.cwd() / '11.3_model_fit_discounted_price.png'
+    plt.savefig(fallback_path, dpi=300, bbox_inches='tight')
+    print(f"  ⚠️ Saved to local cwd instead: {fallback_path.name}")
+plt.close()
+
+# Plot 3: Invoice Count - Historical + Forecast
+fig, ax = plt.subplots(figsize=(14, 7))
+ax.plot(monthly_historical['invoice_period'], monthly_historical['n_invoices'],
+         marker='o', linewidth=2, label='Historical', color='black', alpha=0.7)
+ax.plot(forecast_df['invoice_period'], forecast_df['forecast_invoice_count'],
+         marker='s', linewidth=2.5, linestyle='--', label='Forecast',
+         color='#FFC000', markersize=8)
+ax.axvline(x=last_date, color='red', linestyle='--', linewidth=2, alpha=0.5)
+ax.set_title(f'Monthly Invoice Count\n(Used as Feature in Discounted Price Model)', 
+              fontsize=14, fontweight='bold')
+ax.set_xlabel('Period', fontsize=12)
+ax.set_ylabel('Invoice Count', fontsize=12)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:,.0f}'))
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.tick_params(axis='x', rotation=45)
+
+plt.tight_layout()
+output_viz = OUTPUT_PATH / '11.3_invoice_count_forecast.png'
+try:
+    plt.savefig(output_viz, dpi=300, bbox_inches='tight')
+    print(f"  ✓ Saved: {output_viz.name}")
+except Exception as e:
+    fallback_path = Path.cwd() / '11.3_invoice_count_forecast.png'
+    plt.savefig(fallback_path, dpi=300, bbox_inches='tight')
+    print(f"  ⚠️ Saved to local cwd instead: {fallback_path.name}")
+plt.close()
+
+# Plot 4: Average Price per Invoice
+fig, ax = plt.subplots(figsize=(14, 7))
+historical_avg_price = monthly_historical['total_discounted_price'] / monthly_historical['n_invoices']
+ax.plot(monthly_historical['invoice_period'], historical_avg_price,
+         marker='o', linewidth=2, label='Historical', color='#70AD47', alpha=0.7)
+ax.plot(forecast_df['invoice_period'], forecast_df['forecast_avg_price_per_invoice'],
+         marker='s', linewidth=2.5, linestyle='--', label='Forecast',
+         color='#A9D18E', markersize=8)
+ax.axvline(x=last_date, color='red', linestyle='--', linewidth=2, alpha=0.5)
+avg_historical_price = historical_avg_price.mean()
+ax.axhline(y=avg_historical_price, color='#70AD47', linestyle=':', linewidth=2, alpha=0.5,
+            label=f'Historical Avg: ${avg_historical_price:,.2f}')
+ax.set_title('Average Price per Invoice', fontsize=14, fontweight='bold')
+ax.set_xlabel('Period', fontsize=12)
+ax.set_ylabel('Avg Price per Invoice ($)', fontsize=12)
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.3)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax.tick_params(axis='x', rotation=45)
+
+plt.tight_layout()
+output_viz = OUTPUT_PATH / '11.3_average_price_per_invoice.png'
+try:
+    plt.savefig(output_viz, dpi=300, bbox_inches='tight')
+    print(f"  ✓ Saved: {output_viz.name}")
+except Exception as e:
+    fallback_path = Path.cwd() / '11.3_average_price_per_invoice.png'
+    plt.savefig(fallback_path, dpi=300, bbox_inches='tight')
+    print(f"  ⚠️ Saved to local cwd instead: {fallback_path.name}")
 plt.close()
 
 # ================================================================
