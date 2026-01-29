@@ -6,6 +6,7 @@ what the November baseline late payment rate should be, then applies seasonal ad
 to reconstruct a more accurate revenue estimate.
 
 CORRECTED: Uses DISCOUNTED price for interest calculation (customers get discount, then pay interest on that amount)
+FIXED: Calculates actual average snapshot rate instead of hardcoding 2%
 
 Inputs:
 - ats_grouped_transformed_with_discounts.csv
@@ -61,11 +62,12 @@ CD_TO_DAYS = {
 np.random.seed(RANDOM_SEED)
 
 print("\n" + "="*70)
-print("REVERSE CALIBRATION: FINDING BASELINE FROM TARGET REVENUE")
+print("REVERSE CALIBRATION: FINDING BASELINE FROM TARGET REVENUE (FIXED)")
 print("="*70)
 print(f"Target Revenue: ${TARGET_REVENUE:,.2f}")
 print(f"Approach: Work backwards to find November baseline late rate")
 print(f"USING DISCOUNTED PRICE for interest calculation")
+print(f"FIX: Calculate actual average snapshot rate (not hardcoded 2%)")
 
 # ================================================================
 # Load data
@@ -193,6 +195,31 @@ for i in range(n_deciles):
 
 fy2025_df['decile_snapshot_rate'] = fy2025_df['decile'].map(decile_snapshot_rates)
 
+# ================================================================
+# CRITICAL FIX: Calculate actual average snapshot rate
+# ================================================================
+print("\n" + "="*70)
+print("CALCULATING ACTUAL AVERAGE SNAPSHOT RATE")
+print("="*70)
+
+# Calculate weighted average snapshot rate (weighted by invoice value)
+total_value = fy2025_df['total_undiscounted_price'].sum()
+weighted_snapshot_rate = (fy2025_df['decile_snapshot_rate'] * fy2025_df['total_undiscounted_price']).sum() / total_value
+
+# Also calculate simple average for comparison
+simple_avg_snapshot_rate = fy2025_df['decile_snapshot_rate'].mean()
+
+print(f"Snapshot rate statistics:")
+print(f"  Simple average:   {simple_avg_snapshot_rate*100:.2f}%")
+print(f"  Weighted average: {weighted_snapshot_rate*100:.2f}%")
+print(f"  Min decile rate:  {fy2025_df['decile_snapshot_rate'].min()*100:.2f}%")
+print(f"  Max decile rate:  {fy2025_df['decile_snapshot_rate'].max()*100:.2f}%")
+
+# Use weighted average as the baseline
+old_baseline_snapshot = weighted_snapshot_rate
+print(f"\nUsing weighted average as baseline: {old_baseline_snapshot*100:.2f}%")
+print(f"  (OLD APPROACH used hardcoded 2%)")
+
 # Calculate expected days overdue for each decile
 decile_expected_days = {}
 for i in range(n_deciles):
@@ -226,10 +253,10 @@ def calculate_expected_revenue_vectorized(november_baseline_rate):
     FAST vectorized calculation of expected revenue
     
     CORRECTED: Uses DISCOUNTED price for principal (interest charged on discounted amount)
+    FIXED: Uses actual weighted average snapshot rate as baseline
     """
-    # Scaling factor from 2% snapshot to new baseline
-    old_baseline = 0.02
-    scaling_factor = november_baseline_rate / old_baseline
+    # Scaling factor from actual weighted average to new baseline
+    scaling_factor = november_baseline_rate / old_baseline_snapshot
     
     # Calculate adjusted late rate for each invoice (VECTORIZED)
     scaled_base_rate = fy2025_df['decile_snapshot_rate'] * scaling_factor
@@ -281,15 +308,16 @@ print("="*70)
 
 test_baselines = [0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
 
-print(f"{'Baseline Rate':<15} {'Expected Revenue':<20} {'Gap to Target':<20}")
-print("-" * 60)
+print(f"{'Baseline Rate':<15} {'Scaling Factor':<15} {'Expected Revenue':<20} {'Gap to Target':<20}")
+print("-" * 75)
 
 test_results = []
 for test_rate in test_baselines:
     revenue = calculate_expected_revenue_vectorized(test_rate)
     gap = revenue - TARGET_REVENUE
-    test_results.append({'baseline': test_rate, 'revenue': revenue, 'gap': gap})
-    print(f"{test_rate*100:>6.1f}%          ${revenue:>15,.2f}      ${gap:>15,.2f}")
+    scaling = test_rate / old_baseline_snapshot
+    test_results.append({'baseline': test_rate, 'scaling': scaling, 'revenue': revenue, 'gap': gap})
+    print(f"{test_rate*100:>6.1f}%          {scaling:>6.2f}x          ${revenue:>15,.2f}      ${gap:>15,.2f}")
 
 # ================================================================
 # OPTIMIZATION: Find exact baseline that hits target
@@ -321,10 +349,9 @@ print(f"  Target revenue: ${TARGET_REVENUE:,.2f}")
 print(f"  Difference: ${abs(calibrated_revenue - TARGET_REVENUE):,.2f}")
 
 # Calculate scaling factor
-old_baseline_snapshot = 0.02
 scaling_factor = calibrated_baseline / old_baseline_snapshot
 print(f"\n  Scaling factor from snapshot: {scaling_factor:.2f}x")
-print(f"  (Your 2% snapshot rate × {scaling_factor:.2f} = {calibrated_baseline*100:.2f}%)")
+print(f"  (Your {old_baseline_snapshot*100:.2f}% snapshot rate × {scaling_factor:.2f} = {calibrated_baseline*100:.2f}%)")
 
 # ================================================================
 # Show calibrated decile rates
@@ -338,10 +365,16 @@ print("-" * 50)
 
 calibrated_decile_rates = {}
 for i in range(n_deciles):
-    snapshot_rate = decile_snapshot_rates.get(i, 0.02)
+    snapshot_rate = decile_snapshot_rates.get(i, old_baseline_snapshot)
     calibrated_rate = snapshot_rate * scaling_factor
     calibrated_decile_rates[i] = calibrated_rate
     print(f"{i:<10} {snapshot_rate*100:>6.2f}%          {calibrated_rate*100:>6.2f}%")
+
+# Check for unrealistic rates
+max_calibrated = max(calibrated_decile_rates.values())
+if max_calibrated > 0.5:
+    print(f"\n⚠ WARNING: Maximum calibrated rate is {max_calibrated*100:.1f}%")
+    print(f"  This seems high - check if target revenue is realistic")
 
 # ================================================================
 # Show seasonal adjusted rates
@@ -358,6 +391,12 @@ for year_month, factor in sorted(seasonal_adjustment_factors.items()):
     avg_calibrated = np.mean(list(calibrated_decile_rates.values())) * factor
     monthly_calibrated_rates[year_month] = avg_calibrated
     print(f"{year_month[0]}-{year_month[1]:02d}      {factor:>6.3f}x            {avg_calibrated*100:>8.2f}%")
+
+# Check for unrealistic seasonally adjusted rates
+max_seasonal = max(monthly_calibrated_rates.values())
+if max_seasonal > 0.7:
+    print(f"\n⚠ WARNING: Maximum seasonal rate is {max_seasonal*100:.1f}%")
+    print(f"  This seems very high - seasonal adjustments may be too aggressive")
 
 # ================================================================
 # Save calibration results
@@ -379,7 +418,8 @@ calibration_summary = pd.DataFrame([{
     'n_invoices': len(fy2025_df),
     'total_invoice_value_undiscounted': fy2025_df['total_undiscounted_price'].sum(),
     'total_invoice_value_discounted': fy2025_df['total_discounted_price'].sum(),
-    'calibration_uses_discounted_price': True
+    'calibration_uses_discounted_price': True,
+    'baseline_calculation_method': 'weighted_average'
 }])
 
 calibration_file = os.path.join(OUTPUT_DIR, '10.6_calibrated_baseline_late_rate.csv')
@@ -398,6 +438,7 @@ fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
 # Plot 1: Revenue vs Baseline Rate
 baseline_range = [r['baseline'] for r in test_results]
 revenue_curve = [r['revenue'] for r in test_results]
+scaling_curve = [r['scaling'] for r in test_results]
 
 ax1.plot([b*100 for b in baseline_range], revenue_curve, 'o-', linewidth=2.5, 
         color='steelblue', markersize=8)
@@ -427,7 +468,7 @@ calibrated_rates = [calibrated_decile_rates.get(i, 0) * 100 for i in deciles]
 x = np.arange(len(deciles))
 width = 0.35
 
-ax2.bar(x - width/2, snapshot_rates, width, label='Snapshot (2%)', 
+ax2.bar(x - width/2, snapshot_rates, width, label='Snapshot', 
        color='orange', alpha=0.7, edgecolor='black', linewidth=0.5)
 ax2.bar(x + width/2, calibrated_rates, width, 
        label=f'Calibrated ({calibrated_baseline*100:.1f}%)', 
@@ -463,13 +504,13 @@ ax3.grid(True, alpha=0.3)
 ax4.axis('off')
 
 summary_text = f"""
-CALIBRATION SUMMARY
+CALIBRATION SUMMARY (FIXED)
 
 Target Revenue: ${TARGET_REVENUE:,.0f}
 Expected Revenue: ${calibrated_revenue:,.0f}
 
 BASELINE RATES:
-  Snapshot (November): {old_baseline_snapshot*100:.2f}%
+  Snapshot (weighted avg): {old_baseline_snapshot*100:.2f}%
   Calibrated (November): {calibrated_baseline*100:.2f}%
   Scaling Factor: {scaling_factor:.2f}x
 
@@ -481,8 +522,8 @@ PRICING USED:
    interest on the discounted amount)
 
 INTERPRETATION:
-  Your 2% snapshot rate was too low
-  True November baseline: ~{calibrated_baseline*100:.1f}%
+  Your {old_baseline_snapshot*100:.1f}% weighted average snapshot
+  scales to {calibrated_baseline*100:.1f}% November baseline
   
   This suggests the snapshot captured
   "currently overdue" status, not the
@@ -497,6 +538,10 @@ SEASONAL RANGE:
 FY2025 DATA:
   Total invoices: {len(fy2025_df):,}
   Discounted value: ${fy2025_df['total_discounted_price'].sum():,.0f}
+
+FIX APPLIED:
+  Used weighted average snapshot rate
+  (not hardcoded 2%)
 """
 
 ax4.text(0.1, 0.9, summary_text, transform=ax4.transAxes, fontsize=11,
@@ -513,15 +558,18 @@ print("\n" + "="*70)
 print("CALIBRATION COMPLETE")
 print("="*70)
 print(f"\nKey Finding:")
-print(f"  Your November baseline should be {calibrated_baseline*100:.1f}%, not 2%")
-print(f"  This is {scaling_factor:.1f}x higher than the snapshot rate")
+print(f"  Your November baseline should be {calibrated_baseline*100:.1f}%, not {old_baseline_snapshot*100:.1f}%")
+print(f"  This is {scaling_factor:.1f}x higher than the weighted average snapshot rate")
 print(f"\nPricing Note:")
 print(f"  Calibration uses DISCOUNTED price for interest calculation")
 print(f"  (Customers get discount, interest charged on discounted amount)")
+print(f"\nFix Applied:")
+print(f"  ✓ Used weighted average snapshot rate ({old_baseline_snapshot*100:.2f}%)")
+print(f"  ✓ Not hardcoded 2% (which caused scaling factor to be too high)")
 print(f"\nNext Steps:")
 print(f"  1. Use {calibrated_baseline*100:.1f}% as your November baseline")
 print(f"  2. Apply seasonal adjustments to this calibrated rate")
-print(f"  3. Re-run simulation (10.7) with calibrated decile rates")
+print(f"  3. Re-run simulations (10.7, 10.10) with calibrated decile rates")
 print(f"\nFiles created:")
 print(f"  - 10.6_calibrated_baseline_late_rate.csv")
 print(f"  - 10.6_calibration_analysis.png")
