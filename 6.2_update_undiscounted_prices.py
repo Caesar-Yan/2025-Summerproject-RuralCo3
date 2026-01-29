@@ -12,8 +12,8 @@ Inputs:
     - datetime_parsed_invoice_line_item_df_transformed.csv
 
 Outputs:
-    - datetime_parsed_ats_invoice_line_item_df_transformed.csv (updated)
-    - datetime_parsed_invoice_line_item_df_transformed.csv (updated)
+    - updated_datetime_parsed_ats_invoice_line_item_df_transformed.csv (new file)
+    - updated_datetime_parsed_invoice_line_item_df_transformed.csv (new file)
 """
 
 import pandas as pd
@@ -75,6 +75,10 @@ print(f"\n--- LOADING TARGET FILES ---")
 
 ats_file = data_cleaning_dir / 'datetime_parsed_ats_invoice_line_item_df_transformed.csv'
 invoice_file = data_cleaning_dir / 'datetime_parsed_invoice_line_item_df_transformed.csv'
+
+# Define output files with "updated_" prefix
+ats_output_file = data_cleaning_dir / 'updated_datetime_parsed_ats_invoice_line_item_df_transformed.csv'
+invoice_output_file = data_cleaning_dir / 'updated_datetime_parsed_invoice_line_item_df_transformed.csv'
 
 ats_df = pd.read_csv(ats_file)
 invoice_df = pd.read_csv(invoice_file)
@@ -267,23 +271,16 @@ print(f"\n{'='*70}")
 print(f"SAVING UPDATED FILES")
 print(f"{'='*70}")
 
-# Create backup of original files
-backup_suffix = '_backup_before_discount_update'
-ats_backup = ats_file.parent / (ats_file.stem + backup_suffix + ats_file.suffix)
-invoice_backup = invoice_file.parent / (invoice_file.stem + backup_suffix + invoice_file.suffix)
-
-print(f"\nCreating backups:")
-ats_df.to_csv(ats_backup, index=False)
-print(f"  ✓ {ats_backup.name}")
-invoice_df.to_csv(invoice_backup, index=False)
-print(f"  ✓ {invoice_backup.name}")
-
-# Save updated files
+# Save updated files with "updated_" prefix
 print(f"\nSaving updated files:")
-ats_updated.to_csv(ats_file, index=False)
-print(f"  ✓ {ats_file.name} ({len(ats_updated):,} rows)")
-invoice_updated.to_csv(invoice_file, index=False)
-print(f"  ✓ {invoice_file.name} ({len(invoice_updated):,} rows)")
+ats_updated.to_csv(ats_output_file, index=False)
+print(f"  ✓ {ats_output_file.name} ({len(ats_updated):,} rows)")
+invoice_updated.to_csv(invoice_output_file, index=False)
+print(f"  ✓ {invoice_output_file.name} ({len(invoice_updated):,} rows)")
+
+print(f"\nOriginal files preserved:")
+print(f"  • {ats_file.name}")
+print(f"  • {invoice_file.name}")
 
 # =========================================================
 # SUMMARY
@@ -293,10 +290,10 @@ print(f"UPDATE COMPLETE!")
 print(f"{'='*70}")
 
 print(f"\n📊 SUMMARY:")
-print(f"  • ATS file: {len(ats_updated):,} rows updated")
-print(f"  • Invoice file: {len(invoice_updated):,} rows updated")
+print(f"  • ATS output: {ats_output_file.name} ({len(ats_updated):,} rows)")
+print(f"  • Invoice output: {invoice_output_file.name} ({len(invoice_updated):,} rows)")
 print(f"  • Join key: invoice_id + description")
-print(f"  • Backups created with suffix: '{backup_suffix}'")
+print(f"  • Original files unchanged")
 
 print(f"\n💰 TOTAL PRICE SUMMARY:")
 total_discounted = ats_updated['discounted_price'].sum() + invoice_updated['discounted_price'].sum()
@@ -310,10 +307,10 @@ if total_undiscounted > 0:
     print(f"  • Effective discount rate: {(total_discount_amount / total_undiscounted * 100):.2f}%")
 
 print(f"\n💡 NEXT STEPS:")
-print(f"  1. Run script 08_group_by_invoice_transformed.py to regenerate grouped data")
-print(f"  2. Verify the discount calculations are correct")
-print(f"  3. If issues arise, restore from backup files:")
-print(f"     - {ats_backup.name}")
-print(f"     - {invoice_backup.name}")
+print(f"  1. Review the updated files to verify correctness:")
+print(f"     - {ats_output_file.name}")
+print(f"     - {invoice_output_file.name}")
+print(f"  2. Run script 08_group_by_invoice_transformed.py with the updated files")
+print(f"  3. Verify the discount calculations are correct")
 
 print(f"\n{'='*70}\n")
