@@ -523,9 +523,9 @@ def main():
     plt.close()
     
     # ====================
-    # Plot 1b: Cumulative revenue with confidence intervals
+    # Plot 1b: Cumulative revenue with confidence intervals (large fonts)
     # ====================
-    fig, ax = plt.subplots(figsize=(14, 8))
+    fig, ax = plt.subplots(figsize=(13, 7))
     
     # Scenario 1: with_discount (with CI)
     disc_df = summary_df[summary_df['scenario'] == 'with_discount'].sort_values('invoice_period').reset_index(drop=True)
@@ -537,7 +537,7 @@ def main():
     disc_cumsum_upper = last_disc['upper_95_'].cumsum()
     
     ax.plot(last_disc['invoice_period'], disc_cumsum_mean,
-            marker='o', linewidth=3, markersize=9, color='#4472C4', label='WITH DISCOUNT', zorder=3)
+            marker='o', linewidth=3.5, markersize=11, color='#4472C4', label='WITH DISCOUNT', zorder=3)
     ax.fill_between(last_disc['invoice_period'], disc_cumsum_lower, disc_cumsum_upper,
                     alpha=0.2, color='#4472C4', zorder=1)
     
@@ -550,7 +550,7 @@ def main():
     undisc_cumsum_upper = last_undisc['upper_95_'].cumsum()
     
     ax.plot(last_undisc['invoice_period'], undisc_cumsum_mean,
-            marker='s', linewidth=3, markersize=9, color='#70AD47', label='NO DISCOUNT', zorder=3)
+            marker='s', linewidth=3.5, markersize=11, color='#70AD47', label='NO DISCOUNT', zorder=3)
     ax.fill_between(last_undisc['invoice_period'], undisc_cumsum_lower, undisc_cumsum_upper,
                     alpha=0.2, color='#70AD47', zorder=1, label='_nolegend_')
     
@@ -574,31 +574,35 @@ def main():
     
     ax.text(last_disc['invoice_period'].iloc[-1], final_disc, 
             f'  {format_revenue(final_disc)}',
-            fontsize=14, fontweight='bold', color='#4472C4', va='center')
-    ax.text(last_disc['invoice_period'].iloc[-1], final_disc * 0.85, 
+            fontsize=18, fontweight='bold', color='#4472C4', va='center',
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='#4472C4'))
+    ax.text(last_disc['invoice_period'].iloc[-1], final_disc * 0.70, 
             f'  [{format_ci(final_disc_lower)}, {format_ci(final_disc_upper)}]',
-            fontsize=11, fontweight='normal', color='#4472C4', va='center')
+            fontsize=14, fontweight='normal', color='#4472C4', va='center',
+            bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8, edgecolor='#4472C4'))
     
     final_undisc = undisc_cumsum_mean.iloc[-1]
     final_undisc_lower = undisc_cumsum_lower.iloc[-1]
     final_undisc_upper = undisc_cumsum_upper.iloc[-1]
     ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc, 
             f'  {format_revenue(final_undisc)}',
-            fontsize=14, fontweight='bold', color='#70AD47', va='center')
-    ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc * 0.92, 
+            fontsize=18, fontweight='bold', color='#70AD47', va='center',
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='#70AD47'))
+    ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc * 0.82, 
             f'  [{format_ci(final_undisc_lower)}, {format_ci(final_undisc_upper)}]',
-            fontsize=11, fontweight='normal', color='#70AD47', va='center')
+            fontsize=14, fontweight='normal', color='#70AD47', va='center',
+            bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8, edgecolor='#70AD47'))
     
-    ax.set_title('Forecasted Revenue: Jan 2026 - Jan 2027 \n(Using Discount Rate Forecast)', 
-                 fontsize=16, fontweight='bold')
-    ax.set_xlabel('Month', fontsize=14, fontweight='bold')
-    ax.set_ylabel('Cumulative Revenue ($)', fontsize=14, fontweight='bold')
+    ax.set_title('Forecasted Revenue: Jan 2026 - Jan 2027 (with 95% Confidence Intervals)\n(Using Discount Rate Forecast)', 
+                 fontsize=21, fontweight='bold')
+    ax.set_xlabel('Month', fontsize=18, fontweight='bold')
+    ax.set_ylabel('Cumulative Revenue ($)', fontsize=18, fontweight='bold')
     ax.grid(True, alpha=0.3)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    ax.tick_params(axis='x', rotation=45, labelsize=11)
-    ax.tick_params(axis='y', labelsize=11)
+    ax.tick_params(axis='x', rotation=45, labelsize=14)
+    ax.tick_params(axis='y', labelsize=14)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
-    ax.legend(fontsize=13, loc='upper left', framealpha=0.95)
+    ax.legend(fontsize=17, loc='upper left', framealpha=0.95)
     
     out_png_ci = ALT_VIS / '15.6_cumulative_revenue_with_ci_last_12_months.png'
     out_png_ci.parent.mkdir(parents=True, exist_ok=True)
@@ -681,6 +685,183 @@ def main():
     print(f'✓ Saved comparison plot: {out_png2.name}')
     plt.close()
     
+    # ====================
+    # Plot 3: Revenue Component Breakdown (last 12 months)
+    # ====================
+    fig, ax = plt.subplots(figsize=(14, 8))
+    
+    # Calculate mean values for last 12 months
+    last_n = min(12, n_months)
+    last_months = forecast_df['invoice_period'].tail(last_n).reset_index(drop=True)
+    
+    interest_disc_means = arr_interest_disc[:, -last_n:].mean(axis=0)
+    interest_undisc_means = arr_interest_undisc[:, -last_n:].mean(axis=0)
+    retained_means = arr_retained[:, -last_n:].mean(axis=0)
+    
+    # Cumulative sums for stacking
+    interest_disc_cumsum = interest_disc_means.cumsum()
+    interest_undisc_cumsum = interest_undisc_means.cumsum()
+    retained_cumsum = retained_means.cumsum()
+    
+    # Create stacked area plot
+    ax.fill_between(last_months, 0, interest_disc_cumsum,
+                    alpha=0.8, color='#4472C4', label='Interest on Discounted Amount', zorder=1)
+    ax.fill_between(last_months, interest_disc_cumsum, interest_disc_cumsum + interest_undisc_cumsum,
+                    alpha=0.8, color='#70AD47', label='Interest on Undiscounted Amount', zorder=2)
+    ax.fill_between(last_months, interest_disc_cumsum + interest_undisc_cumsum, 
+                    interest_disc_cumsum + interest_undisc_cumsum + retained_cumsum,
+                    alpha=0.8, color='#FFC000', label='Retained Discount Value', zorder=3)
+    
+    # Add total line for reference
+    total_cumsum = interest_disc_cumsum + interest_undisc_cumsum + retained_cumsum
+    ax.plot(last_months, total_cumsum, color='black', linewidth=2, linestyle='--', 
+            alpha=0.7, label='Total Revenue (All Components)', zorder=4)
+    
+    # Format final value labels
+    def format_revenue_short(val):
+        if val < 1e6:
+            return f'${val/1e3:.0f}K'
+        else:
+            return f'${val/1e6:.2f}M'
+    
+    # Add component value labels at the end
+    final_disc = interest_disc_cumsum[-1]
+    final_undisc = interest_undisc_cumsum[-1]
+    final_retained = retained_cumsum[-1]
+    final_total = total_cumsum[-1]
+    
+    ax.text(last_months.iloc[-1], final_disc/2, f'{format_revenue_short(final_disc)}',
+            fontsize=12, fontweight='bold', color='white', ha='left', va='center')
+    ax.text(last_months.iloc[-1], final_disc + final_undisc/2, f'{format_revenue_short(final_undisc)}',
+            fontsize=12, fontweight='bold', color='white', ha='left', va='center')
+    ax.text(last_months.iloc[-1], final_disc + final_undisc + final_retained/2, f'{format_revenue_short(final_retained)}',
+            fontsize=12, fontweight='bold', color='black', ha='left', va='center')
+    ax.text(last_months.iloc[-1], final_total, f'  {format_revenue_short(final_total)}',
+            fontsize=14, fontweight='bold', color='black', ha='left', va='bottom')
+    
+    ax.set_title('Cumulative Revenue by Component: Jan 2026 - Jan 2027\n(Using Discount Rate Forecast)', 
+                 fontsize=16, fontweight='bold')
+    ax.set_xlabel('Month', fontsize=14, fontweight='bold')
+    ax.set_ylabel('Cumulative Revenue ($)', fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    ax.tick_params(axis='x', rotation=45, labelsize=11)
+    ax.tick_params(axis='y', labelsize=11)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
+    ax.legend(fontsize=12, loc='upper left', framealpha=0.95)
+    
+    out_png3 = ALT_VIS / '15.6_revenue_component_breakdown.png'
+    out_png3.parent.mkdir(parents=True, exist_ok=True)
+    plt.tight_layout()
+    plt.savefig(out_png3, dpi=300)
+    print(f'✓ Saved component breakdown plot: {out_png3.name}')
+    plt.close()
+    
+    # ================================================================
+    # REVENUE BREAKDOWN TABLE
+    # ================================================================
+    print('\n' + '='*80)
+    print('📊 FORECAST REVENUE COMPONENT BREAKDOWN TABLE')
+    print('='*80)
+    
+    # Create aesthetic table with actual component breakdowns
+    fig, ax = plt.subplots(figsize=(14, 10))
+    ax.axis('tight')
+    ax.axis('off')
+    
+    # Calculate last 12 months component totals
+    last_n = min(12, n_months)
+    
+    # Get component totals from bootstrap arrays
+    total_interest_disc = arr_interest_disc[:, -last_n:].sum(axis=1).mean()
+    total_interest_undisc = arr_interest_undisc[:, -last_n:].sum(axis=1).mean()
+    total_retained = arr_retained[:, -last_n:].sum(axis=1).mean()
+    
+    total_with_discount = total_interest_disc
+    total_no_discount = total_interest_undisc + total_retained
+    
+    # Calculate confidence intervals
+    total_with_ci_lower = np.percentile(arr_interest_disc[:, -last_n:].sum(axis=1), 2.5)
+    total_with_ci_upper = np.percentile(arr_interest_disc[:, -last_n:].sum(axis=1), 97.5)
+    
+    total_no_ci_lower = np.percentile((arr_interest_undisc[:, -last_n:] + arr_retained[:, -last_n:]).sum(axis=1), 2.5)
+    total_no_ci_upper = np.percentile((arr_interest_undisc[:, -last_n:] + arr_retained[:, -last_n:]).sum(axis=1), 97.5)
+    
+    # Prepare detailed table data
+    table_data = [
+        ['Component', 'Revenue ($)', '95% CI Range', 'Proportion', 'Description'],
+        ['', '', '', '', ''],
+        ['WITH DISCOUNT SCENARIO:', '', '', '', ''],
+        ['Interest on Discounted Amounts', f'${total_interest_disc:,.0f}', f'${total_with_ci_lower:,.0f} - ${total_with_ci_upper:,.0f}', '100%', 'Interest earned on discounted invoice amounts only'],
+        ['', '', '', '', ''],
+        ['NO DISCOUNT SCENARIO BREAKDOWN:', '', '', '', ''],
+        ['Interest on Undiscounted Amounts', f'${total_interest_undisc:,.0f}', '', f'{(total_interest_undisc/total_no_discount)*100:.1f}%', 'Interest earned on full undiscounted amounts'],
+        ['Retained Discount Value', f'${total_retained:,.0f}', '', f'{(total_retained/total_no_discount)*100:.1f}%', 'Discount amounts retained when unpaid'],
+        ['Total NO DISCOUNT Revenue', f'${total_no_discount:,.0f}', f'${total_no_ci_lower:,.0f} - ${total_no_ci_upper:,.0f}', '100%', 'Combined interest + retained discounts'],
+        ['', '', '', '', ''],
+        ['FORECAST METHODOLOGY:', '', '', '', ''],
+        ['Discount Rate Source', '11.4 Forecast', '', '', 'Time-varying discount rates (not constant)'],
+        ['Bootstrap Iterations', f'{RUNS}', '', '', 'Monte Carlo uncertainty quantification'],
+        ['Forecast Period', 'Jan 2026 - Jan 2027', '', '', 'Last 12 months of 15-month forecast'],
+        ['', '', '', '', ''],
+        ['COMPARISON METRICS:', '', '', '', ''],
+        ['Revenue Multiplier', f'{total_no_discount/total_with_discount:.2f}x', '', f'+{((total_no_discount/total_with_discount-1)*100):.1f}%', 'NO DISCOUNT advantage over WITH DISCOUNT'],
+        ['Average Discount Rate', f'{forecast_df["forecast_discount_rate"].mean():.1f}%', f'{forecast_df["forecast_discount_rate"].min():.1f}% - {forecast_df["forecast_discount_rate"].max():.1f}%', '', 'Forecasted discount rate range'],
+        ['Implied Undiscounted Multiplier', f'{multiplier_means.mean():.3f}', f'{multiplier_means.min():.3f} - {multiplier_means.max():.3f}', '', 'Undiscounted/Discounted ratio'],
+    ]
+    
+    # Create table
+    table = ax.table(cellText=table_data, loc='center', cellLoc='left')
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1.2, 1.8)
+    
+    # Style the table
+    for i, row in enumerate(table_data):
+        for j, cell in enumerate(row):
+            cell_obj = table[(i, j)]
+            
+            if i == 0:  # Header row
+                cell_obj.set_facecolor('#4472C4')
+                cell_obj.set_text_props(weight='bold', color='white')
+            elif 'WITH DISCOUNT SCENARIO' in str(cell):  # Section headers
+                cell_obj.set_facecolor('#E8F4FD')
+                cell_obj.set_text_props(weight='bold', color='#4472C4')
+            elif 'Interest on Discounted' in str(cell):  # WITH DISCOUNT row
+                cell_obj.set_facecolor('#F0F8FF')
+                if j == 0:  # Component name
+                    cell_obj.set_text_props(weight='bold', color='#4472C4')
+            elif 'NO DISCOUNT SCENARIO' in str(cell):  # Section header
+                cell_obj.set_facecolor('#E8F6E8')
+                cell_obj.set_text_props(weight='bold', color='#70AD47')
+            elif 'Interest on Undiscounted' in str(cell) or 'Retained Discount' in str(cell):  # Component rows
+                cell_obj.set_facecolor('#F0FFF0')
+                if j == 0:  # Component name
+                    cell_obj.set_text_props(weight='bold', color='#228B22')
+            elif 'Total NO DISCOUNT' in str(cell):  # Total row
+                cell_obj.set_facecolor('#D4E8D4')
+                if j == 0:  # Component name
+                    cell_obj.set_text_props(weight='bold', color='#70AD47')
+            elif 'FORECAST METHODOLOGY' in str(cell) or 'COMPARISON METRICS' in str(cell):  # Section headers
+                cell_obj.set_facecolor('#F8F8F8')
+                cell_obj.set_text_props(weight='bold')
+            elif 'Revenue Multiplier' in str(cell) or 'Average Discount' in str(cell) or 'Implied' in str(cell):  # Metric rows
+                cell_obj.set_facecolor('#FFF8DC')
+                if j == 0:  # Metric name
+                    cell_obj.set_text_props(weight='bold')
+            elif j == 0 and str(cell).strip() != '':  # Other metric names
+                if 'Discount Rate Source' in str(cell) or 'Bootstrap' in str(cell) or 'Forecast Period' in str(cell):
+                    cell_obj.set_facecolor('#F5F5F5')
+    
+    plt.title('Jan 2026 - Jan 2027 Revenue Forecast Component Analysis\\n(Using Discount Rate Forecast from 11.4)', 
+              fontsize=16, fontweight='bold', pad=20)
+    
+    table_output = ALT_VIS / '15.6_revenue_breakdown_table.png'
+    table_output.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(table_output, dpi=300, bbox_inches='tight', facecolor='white')
+    print(f'✓ Saved revenue breakdown table: {table_output.name}')
+    plt.close()
+
     # ================================================================
     # FINAL SUMMARY
     # ================================================================
@@ -700,7 +881,10 @@ def main():
     print(f'\n📁 Output Files:')
     print(f'  • 15.6_bootstrap_component_summary.csv - Monthly revenue summary')
     print(f'  • 15.6_cumulative_revenue_last_12_months.png - Revenue scenarios')
+    print(f'  • 15.6_cumulative_revenue_with_ci_last_12_months.png - Revenue with confidence intervals (large fonts)')
     print(f'  • 15.6_discount_rate_comparison.png - Multiplier and rate analysis')
+    print(f'  • 15.6_revenue_component_breakdown.png - Stacked revenue component breakdown')
+    print(f'  • 15.6_revenue_breakdown_table.png - Detailed component analysis table')
     
     print('\n' + '='*80)
     print('NEXT STEPS:')
