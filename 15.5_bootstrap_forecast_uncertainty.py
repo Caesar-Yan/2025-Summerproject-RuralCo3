@@ -384,7 +384,7 @@ def main():
     
     # Add confidence interval band
     ax.fill_between(last_disc['invoice_period'], disc_cumsum_lower, disc_cumsum_upper,
-                    alpha=0.3, color='#4472C4', label='95% CI (With Discount)')
+                    alpha=0.3, color='#4472C4')
     
     # Add area under curve (more transparent)
     ax.fill_between(last_disc['invoice_period'], 0, disc_cumsum_mean,
@@ -415,7 +415,7 @@ def main():
     
     # Add confidence interval band
     ax.fill_between(last_undisc['invoice_period'], undisc_cumsum_lower, undisc_cumsum_upper,
-                    alpha=0.3, color='#70AD47', label='95% CI (No Discount)')
+                    alpha=0.3, color='#70AD47')
     
     # Add area under curve (more transparent)
     ax.fill_between(last_undisc['invoice_period'], 0, undisc_cumsum_mean,
@@ -439,7 +439,7 @@ def main():
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     ax.tick_params(axis='x', rotation=45)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
-    ax.legend(fontsize=11, loc='upper left', framealpha=0.95, ncol=2)
+    ax.legend(fontsize=11, loc='upper left', framealpha=0.95)
     
     out_png = ALT_FORECAST / '15.5_cumulative_revenue_last_12_months.png'
     out_png.parent.mkdir(parents=True, exist_ok=True)
@@ -447,6 +447,34 @@ def main():
     plt.savefig(out_png, dpi=300)
     print(f'[OK] Saved plot: {out_png.name}')
     plt.close()
+    
+    # Save cumulative confidence intervals CSV
+    cumulative_stats = []
+    
+    # Scenario 1: with_discount cumulative
+    for i, row in last_disc.iterrows():
+        cumulative_stats.append({
+            'scenario': 'with_discount',
+            'invoice_period': row['invoice_period'],
+            'cumulative_mean': disc_cumsum_mean.loc[i],
+            'cumulative_lower_95': disc_cumsum_lower.loc[i],
+            'cumulative_upper_95': disc_cumsum_upper.loc[i]
+        })
+    
+    # Scenario 2: no_discount cumulative  
+    for i, row in last_undisc.iterrows():
+        cumulative_stats.append({
+            'scenario': 'no_discount',
+            'invoice_period': row['invoice_period'],
+            'cumulative_mean': undisc_cumsum_mean.loc[i],
+            'cumulative_lower_95': undisc_cumsum_lower.loc[i],
+            'cumulative_upper_95': undisc_cumsum_upper.loc[i]
+        })
+    
+    cumulative_df = pd.DataFrame(cumulative_stats)
+    cumulative_csv = ALT_FORECAST / '15.5_cumulative_confidence_intervals.csv'
+    cumulative_df.to_csv(cumulative_csv, index=False)
+    print(f'[OK] Saved cumulative CI: {cumulative_csv.name}')
     
     print(f'[OK] Bootstrap complete: {RUNS} iterations, {n_months} months')
     
