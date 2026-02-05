@@ -392,10 +392,21 @@ def main():
     
     # Add final value annotation for with_discount
     final_disc = disc_cumsum_mean.iloc[-1]
+    final_disc_lower = disc_cumsum_lower.iloc[-1]
+    final_disc_upper = disc_cumsum_upper.iloc[-1]
+    
     if final_disc >= 1e6:
         disc_label = f'  ${final_disc/1e6:.2f}M'
     else:
         disc_label = f'  ${final_disc/1e3:.0f}K'
+    
+    # Format final values with K for <1M, M for >=1M
+    def format_revenue(val):
+        if val < 1e6:
+            return f'${val/1e3:.0f}K'
+        else:
+            return f'${val/1e6:.2f}M'
+    
     ax.text(last_disc['invoice_period'].iloc[-1], final_disc, disc_label,
             fontsize=12, fontweight='bold', color='#4472C4', va='center',
             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='#4472C4', linewidth=1))
@@ -423,6 +434,9 @@ def main():
     
     # Add final value annotation for no_discount
     final_undisc = undisc_cumsum_mean.iloc[-1]
+    final_undisc_lower = undisc_cumsum_lower.iloc[-1]
+    final_undisc_upper = undisc_cumsum_upper.iloc[-1]
+    
     if final_undisc >= 1e6:
         undisc_label = f'  ${final_undisc/1e6:.2f}M'
     else:
@@ -431,10 +445,10 @@ def main():
             fontsize=12, fontweight='bold', color='#70AD47', va='center',
             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='#70AD47', linewidth=1))
     
-    ax.set_title('Revenue Scenarios: Cumulative Last 12 Months (Bootstrap Forecast Uncertainty)', 
-                 fontsize=21, fontweight='bold')  # Increased from 14 to 18 (30% bigger)
-    ax.set_xlabel('Month', fontsize=16)  # Increased from 12 to 16 (30% bigger)
-    ax.set_ylabel('Cumulative Revenue ($)', fontsize=16)  # Increased from 12 to 16 (30% bigger)
+    ax.set_title('Forecasted Revenue: Cumulative over Last 12 Months\n(Bootstrap Forecast Uncertainty)', 
+                 fontsize=21, fontweight='bold')
+    ax.set_xlabel('Month', fontsize=16)
+    ax.set_ylabel('Cumulative Revenue ($)', fontsize=16)
     ax.grid(True, alpha=0.3)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     ax.tick_params(axis='x', rotation=45)
@@ -479,11 +493,11 @@ def main():
     print(f'[OK] Bootstrap complete: {RUNS} iterations, {n_months} months')
     
     print(f'\n[LAST 12 MONTHS] Revenue Summary:')
-    print(f'[SCENARIO 1] WITH DISCOUNT (Interest on Discounted Amount)')
+    print(f'[SCENARIO 1] WITH DISCOUNT')
     print(f'  Total revenue (mean): ${with_disc["mean_total"].sum():,.2f}')
     print(f'  95% CI: [${with_disc["lower_95_"].sum():,.2f}, ${with_disc["upper_95_"].sum():,.2f}]')
     
-    print(f'[SCENARIO 2] NO DISCOUNT (Interest on Undiscounted Amount + Retained Discount)')
+    print(f'[SCENARIO 2] NO DISCOUNT')
     print(f'  Total revenue (mean): ${no_disc["mean_total"].sum():,.2f}')
     print(f'  95% CI: [${no_disc["lower_95_"].sum():,.2f}, ${no_disc["upper_95_"].sum():,.2f}]')
     

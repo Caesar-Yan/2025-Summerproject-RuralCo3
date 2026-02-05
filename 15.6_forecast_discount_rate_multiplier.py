@@ -416,6 +416,143 @@ def main():
     summary_df.to_csv(out_csv, index=False)
     print(f'✓ Saved summary: {out_csv.name}')
     
+    # Save detailed component breakdown with confidence intervals
+    detailed_stats = []
+    for j in range(n_months):
+        iid = forecast_df['invoice_period'].iloc[j]
+        
+        # Interest on discounted amount
+        interest_disc_arr = arr_interest_disc[:, j]
+        
+        # Interest on undiscounted amount 
+        interest_undisc_arr = arr_interest_undisc[:, j]
+        
+        # Retained discount value
+        retained_arr = arr_retained[:, j]
+        
+        # Combined interest + retained (total for no_discount scenario)
+        total_no_discount_arr = arr_interest_undisc_plus_retained[:, j]
+        
+        detailed_stats.append({
+            'invoice_period': iid,
+            'component': 'interest_on_discounted',
+            'mean_value': float(np.mean(interest_disc_arr)),
+            'lower_95': float(np.percentile(interest_disc_arr, 2.5)),
+            'upper_95': float(np.percentile(interest_disc_arr, 97.5)),
+            'std_dev': float(np.std(interest_disc_arr)),
+            'scenario': 'with_discount'
+        })
+        
+        detailed_stats.append({
+            'invoice_period': iid,
+            'component': 'interest_on_undiscounted',
+            'mean_value': float(np.mean(interest_undisc_arr)),
+            'lower_95': float(np.percentile(interest_undisc_arr, 2.5)),
+            'upper_95': float(np.percentile(interest_undisc_arr, 97.5)),
+            'std_dev': float(np.std(interest_undisc_arr)),
+            'scenario': 'no_discount'
+        })
+        
+        detailed_stats.append({
+            'invoice_period': iid,
+            'component': 'retained_discount_value',
+            'mean_value': float(np.mean(retained_arr)),
+            'lower_95': float(np.percentile(retained_arr, 2.5)),
+            'upper_95': float(np.percentile(retained_arr, 97.5)),
+            'std_dev': float(np.std(retained_arr)),
+            'scenario': 'no_discount'
+        })
+        
+        detailed_stats.append({
+            'invoice_period': iid,
+            'component': 'total_no_discount_revenue',
+            'mean_value': float(np.mean(total_no_discount_arr)),
+            'lower_95': float(np.percentile(total_no_discount_arr, 2.5)),
+            'upper_95': float(np.percentile(total_no_discount_arr, 97.5)),
+            'std_dev': float(np.std(total_no_discount_arr)),
+            'scenario': 'no_discount'
+        })
+    
+    detailed_df = pd.DataFrame(detailed_stats)
+    detailed_csv = ALT_VIS / '15.6_detailed_component_breakdown.csv'
+    detailed_df.to_csv(detailed_csv, index=False)
+    print(f'✓ Saved detailed component breakdown: {detailed_csv.name}')
+    
+    # Create final revenue summary with confidence intervals
+    # Calculate cumulative totals for last 12 months
+    last_n = min(12, n_months)
+    
+    # Sum across last 12 months for each bootstrap iteration
+    final_interest_disc = arr_interest_disc[:, -last_n:].sum(axis=1)
+    final_interest_undisc = arr_interest_undisc[:, -last_n:].sum(axis=1)
+    final_retained = arr_retained[:, -last_n:].sum(axis=1)
+    final_total_no_discount = arr_interest_undisc_plus_retained[:, -last_n:].sum(axis=1)
+    
+    final_summary = [
+        {
+            'scenario': 'WITH_DISCOUNT',
+            'component': 'Total Revenue',
+            'mean_value': float(np.mean(final_interest_disc)),
+            'lower_95': float(np.percentile(final_interest_disc, 2.5)),
+            'upper_95': float(np.percentile(final_interest_disc, 97.5)),
+            'std_dev': float(np.std(final_interest_disc)),
+            'description': 'Interest earned on discounted invoice amounts only'
+        },
+        {
+            'scenario': 'WITH_DISCOUNT',
+            'component': 'Interest on Discounted Amount',
+            'mean_value': float(np.mean(final_interest_disc)),
+            'lower_95': float(np.percentile(final_interest_disc, 2.5)),
+            'upper_95': float(np.percentile(final_interest_disc, 97.5)),
+            'std_dev': float(np.std(final_interest_disc)),
+            'description': 'Interest component for with_discount scenario'
+        },
+        {
+            'scenario': 'NO_DISCOUNT',
+            'component': 'Total Revenue',
+            'mean_value': float(np.mean(final_total_no_discount)),
+            'lower_95': float(np.percentile(final_total_no_discount, 2.5)),
+            'upper_95': float(np.percentile(final_total_no_discount, 97.5)),
+            'std_dev': float(np.std(final_total_no_discount)),
+            'description': 'Combined interest on undiscounted + retained discount value'
+        },
+        {
+            'scenario': 'NO_DISCOUNT',
+            'component': 'Interest on Undiscounted Amount',
+            'mean_value': float(np.mean(final_interest_undisc)),
+            'lower_95': float(np.percentile(final_interest_undisc, 2.5)),
+            'upper_95': float(np.percentile(final_interest_undisc, 97.5)),
+            'std_dev': float(np.std(final_interest_undisc)),
+            'description': 'Interest earned on full undiscounted invoice amounts'
+        },
+        {
+            'scenario': 'NO_DISCOUNT',
+            'component': 'Retained Discount Value',
+            'mean_value': float(np.mean(final_retained)),
+            'lower_95': float(np.percentile(final_retained, 2.5)),
+            'upper_95': float(np.percentile(final_retained, 97.5)),
+            'std_dev': float(np.std(final_retained)),
+            'description': 'Discount amounts retained when customers pay late'
+        }
+    ]
+    
+    # Add comparison metrics
+    revenue_ratio = np.mean(final_total_no_discount) / np.mean(final_interest_disc)
+    final_summary.append({
+        'scenario': 'COMPARISON',
+        'component': 'Revenue Multiplier',
+        'mean_value': float(revenue_ratio),
+        'lower_95': np.nan,
+        'upper_95': np.nan,
+        'std_dev': np.nan,
+        'description': f'NO_DISCOUNT advantage over WITH_DISCOUNT: {revenue_ratio:.2f}x'
+    })
+    
+    final_summary_df = pd.DataFrame(final_summary)
+    final_summary_csv = ALT_VIS / '15.6_final_revenue_summary_with_ci.csv'
+    final_summary_df.to_csv(final_summary_csv, index=False)
+    print(f'✓ Saved final revenue summary: {final_summary_csv.name}')
+    
     # ================================================================
     # STEP 6: Calculate last 12 months statistics
     # ================================================================
@@ -576,10 +713,6 @@ def main():
             f'  {format_revenue(final_disc)}',
             fontsize=18, fontweight='bold', color='#4472C4', va='center',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='#4472C4'))
-    ax.text(last_disc['invoice_period'].iloc[-1], final_disc * 0.70, 
-            f'  [{format_ci(final_disc_lower)}, {format_ci(final_disc_upper)}]',
-            fontsize=14, fontweight='normal', color='#4472C4', va='center',
-            bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8, edgecolor='#4472C4'))
     
     final_undisc = undisc_cumsum_mean.iloc[-1]
     final_undisc_lower = undisc_cumsum_lower.iloc[-1]
@@ -588,15 +721,11 @@ def main():
             f'  {format_revenue(final_undisc)}',
             fontsize=18, fontweight='bold', color='#70AD47', va='center',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='#70AD47'))
-    ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc * 0.82, 
-            f'  [{format_ci(final_undisc_lower)}, {format_ci(final_undisc_upper)}]',
-            fontsize=14, fontweight='normal', color='#70AD47', va='center',
-            bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8, edgecolor='#70AD47'))
     
     ax.set_title('Forecasted Revenue: Jan 2026 - Jan 2027 (with 95% Confidence Intervals)\n(Using Discount Rate Forecast)', 
                  fontsize=21, fontweight='bold')
-    ax.set_xlabel('Month', fontsize=18, fontweight='bold')
-    ax.set_ylabel('Cumulative Revenue ($)', fontsize=18, fontweight='bold')
+    ax.set_xlabel('Month', fontsize=16)
+    ax.set_ylabel('Cumulative Revenue ($)', fontsize=16)
     ax.grid(True, alpha=0.3)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     ax.tick_params(axis='x', rotation=45, labelsize=14)
