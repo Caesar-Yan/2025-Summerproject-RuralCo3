@@ -736,7 +736,7 @@ plt.close()
 
 # 2. Confidence Intervals Comparison
 print("  Creating confidence intervals visualization...")
-fig, ax = plt.subplots(figsize=(12, 8))
+fig, ax = plt.subplots(figsize=(13, 7))
 
 scenarios = ['With Discount', 'No Discount']
 means = [summary_with['total_revenue_mean'], summary_no['total_revenue_mean']]
@@ -813,7 +813,7 @@ plt.close()
 
 # 4. Monthly Revenue with Uncertainty Bands
 print("  Creating monthly revenue uncertainty bands...")
-fig, ax = plt.subplots(figsize=(16, 9))
+fig, ax = plt.subplots(figsize=(13, 7))
 
 # Calculate monthly percentiles
 def calculate_monthly_percentiles(monthly_df, percentiles=[0.05, 0.25, 0.50, 0.75, 0.95]):

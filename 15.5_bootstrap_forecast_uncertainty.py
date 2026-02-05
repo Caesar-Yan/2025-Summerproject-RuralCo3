@@ -373,51 +373,73 @@ def main():
     last_n = min(12, len(disc_df))
     last_disc = disc_df.tail(last_n)
     
-    ax.plot(last_disc['invoice_period'], last_disc['mean_total'].cumsum(),
+    # Calculate cumulative values and confidence intervals
+    disc_cumsum_mean = last_disc['mean_total'].cumsum()
+    disc_cumsum_lower = last_disc['lower_95_'].cumsum()
+    disc_cumsum_upper = last_disc['upper_95_'].cumsum()
+    
+    # Plot mean line
+    ax.plot(last_disc['invoice_period'], disc_cumsum_mean,
             marker='o', linewidth=2.5, markersize=8, color='#4472C4', label='WITH DISCOUNT (Interest on Discounted)')
-    ax.fill_between(last_disc['invoice_period'], 0, last_disc['mean_total'].cumsum(),
-                    alpha=0.2, color='#4472C4')
+    
+    # Add confidence interval band
+    ax.fill_between(last_disc['invoice_period'], disc_cumsum_lower, disc_cumsum_upper,
+                    alpha=0.3, color='#4472C4', label='95% CI (With Discount)')
+    
+    # Add area under curve (more transparent)
+    ax.fill_between(last_disc['invoice_period'], 0, disc_cumsum_mean,
+                    alpha=0.1, color='#4472C4')
     
     # Add final value annotation for with_discount
-    disc_cumsum = last_disc['mean_total'].cumsum()
-    final_disc = disc_cumsum.iloc[-1]
+    final_disc = disc_cumsum_mean.iloc[-1]
     if final_disc >= 1e6:
         disc_label = f'  ${final_disc/1e6:.2f}M'
     else:
         disc_label = f'  ${final_disc/1e3:.0f}K'
     ax.text(last_disc['invoice_period'].iloc[-1], final_disc, disc_label,
-            fontsize=10, fontweight='bold', color='#4472C4', va='center',
+            fontsize=12, fontweight='bold', color='#4472C4', va='center',
             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='#4472C4', linewidth=1))
     
     # Scenario 2: no_discount
     undisc_df = summary_df[summary_df['scenario'] == 'no_discount'].sort_values('invoice_period').reset_index(drop=True)
     last_undisc = undisc_df.tail(last_n)
     
-    ax.plot(last_undisc['invoice_period'], last_undisc['mean_total'].cumsum(),
+    # Calculate cumulative values and confidence intervals
+    undisc_cumsum_mean = last_undisc['mean_total'].cumsum()
+    undisc_cumsum_lower = last_undisc['lower_95_'].cumsum()
+    undisc_cumsum_upper = last_undisc['upper_95_'].cumsum()
+    
+    # Plot mean line
+    ax.plot(last_undisc['invoice_period'], undisc_cumsum_mean,
             marker='s', linewidth=2.5, markersize=8, color='#70AD47', label='NO DISCOUNT (Interest on Undiscounted + Retained)')
-    ax.fill_between(last_undisc['invoice_period'], 0, last_undisc['mean_total'].cumsum(),
-                    alpha=0.2, color='#70AD47')
+    
+    # Add confidence interval band
+    ax.fill_between(last_undisc['invoice_period'], undisc_cumsum_lower, undisc_cumsum_upper,
+                    alpha=0.3, color='#70AD47', label='95% CI (No Discount)')
+    
+    # Add area under curve (more transparent)
+    ax.fill_between(last_undisc['invoice_period'], 0, undisc_cumsum_mean,
+                    alpha=0.1, color='#70AD47')
     
     # Add final value annotation for no_discount
-    undisc_cumsum = last_undisc['mean_total'].cumsum()
-    final_undisc = undisc_cumsum.iloc[-1]
+    final_undisc = undisc_cumsum_mean.iloc[-1]
     if final_undisc >= 1e6:
         undisc_label = f'  ${final_undisc/1e6:.2f}M'
     else:
         undisc_label = f'  ${final_undisc/1e3:.0f}K'
     ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc, undisc_label,
-            fontsize=10, fontweight='bold', color='#70AD47', va='center',
+            fontsize=12, fontweight='bold', color='#70AD47', va='center',
             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='#70AD47', linewidth=1))
     
     ax.set_title('Revenue Scenarios: Cumulative Last 12 Months (Bootstrap Forecast Uncertainty)', 
-                 fontsize=18, fontweight='bold')  # Increased from 14 to 18 (30% bigger)
+                 fontsize=21, fontweight='bold')  # Increased from 14 to 18 (30% bigger)
     ax.set_xlabel('Month', fontsize=16)  # Increased from 12 to 16 (30% bigger)
     ax.set_ylabel('Cumulative Revenue ($)', fontsize=16)  # Increased from 12 to 16 (30% bigger)
     ax.grid(True, alpha=0.3)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     ax.tick_params(axis='x', rotation=45)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
-    ax.legend(fontsize=11, loc='upper left', framealpha=0.95)
+    ax.legend(fontsize=11, loc='upper left', framealpha=0.95, ncol=2)
     
     out_png = ALT_FORECAST / '15.5_cumulative_revenue_last_12_months.png'
     out_png.parent.mkdir(parents=True, exist_ok=True)

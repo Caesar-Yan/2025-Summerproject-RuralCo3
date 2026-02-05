@@ -822,7 +822,7 @@ plt.close()
 
 # 4. Monthly Revenue Uncertainty
 print("  Creating monthly revenue uncertainty...")
-fig, ax = plt.subplots(figsize=(16, 9))
+fig, ax = plt.subplots(figsize=(13, 7))
 
 def calculate_monthly_percentiles(monthly_df, percentiles=[0.05, 0.25, 0.50, 0.75, 0.95]):
     monthly_stats = monthly_df.groupby('month')['cumulative'].quantile(percentiles).unstack()
@@ -867,17 +867,19 @@ def format_revenue(val):
 
 # Add label at end of WITH DISCOUNT
 ax.text(monthly_with_stats.index[-1], with_final + 40000, 
-        f'  {format_revenue(with_final)}', fontsize=12, fontweight='bold', color='#70AD47', va='bottom')
+        f'  {format_revenue(with_final)}', fontsize=12, fontweight='bold', color='#70AD47', va='bottom',
+        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='#70AD47'))
 
 # Add label at end of NO DISCOUNT
 ax.text(monthly_no_stats.index[-1], no_final - 40000, 
-        f'  {format_revenue(no_final)}', fontsize=12, fontweight='bold', color='#4472C4', va='top')
+        f'  {format_revenue(no_final)}', fontsize=12, fontweight='bold', color='#4472C4', va='top',
+        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='#4472C4'))
 
-ax.set_title(f'FY2025 Cumulative Revenue with Uncertainty\n({N_SIMULATIONS} Simulations with Re-Bundling)', 
-             fontsize=18, fontweight='bold', pad=20)
+ax.set_title(f'FY2025 Cumulative Revenue with Uncertainty\n({N_SIMULATIONS} Monte Carlo Sims)', 
+             fontsize=21, fontweight='bold', pad=20)
 ax.set_xlabel('Invoice Month', fontsize=15, fontweight='bold')
 ax.set_ylabel('Cumulative Revenue ($)', fontsize=15, fontweight='bold')
-ax.legend(loc='upper left', fontsize=13, framealpha=0.95)
+ax.legend(loc='center left', fontsize=13, framealpha=0.95)
 ax.grid(True, alpha=0.3)
 ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))

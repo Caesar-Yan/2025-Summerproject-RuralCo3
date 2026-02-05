@@ -611,9 +611,9 @@ ax2.bar(x - width/2, snapshot_rates, width, label='Snapshot',
 ax2.bar(x + width/2, calibrated_rates, width, 
        label=f'Calibrated ({calibrated_baseline*100:.1f}%)', 
        color='green', alpha=0.7, edgecolor='black', linewidth=0.5)
-ax2.set_title('Decile Base Rates: Snapshot vs Calibrated', fontsize=14, fontweight='bold')
-ax2.set_xlabel('Decile', fontsize=12)
-ax2.set_ylabel('Late Payment Rate (%)', fontsize=12)
+ax2.set_title('Decile Base Rates: Snapshot vs Calibrated', fontsize=21, fontweight='bold')
+ax2.set_xlabel('Decile', fontsize=16)
+ax2.set_ylabel('Late Payment Rate (%)', fontsize=16)
 ax2.set_xticks(x)
 ax2.set_xticklabels([f'D{i}' for i in deciles])
 ax2.legend(fontsize=10)

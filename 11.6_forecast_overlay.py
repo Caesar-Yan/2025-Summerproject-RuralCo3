@@ -191,7 +191,7 @@ print(f"    Min:    {merged['discount_rate_pct'].min():>15.2f}%")
 print(f"    Max:    {merged['discount_rate_pct'].max():>15.2f}%")
 
 # Create visualization
-fig, ax = plt.subplots(figsize=(14, 7))
+fig, ax = plt.subplots(figsize=(13, 7))
 
 # Plot 1: Overlay of actual and forecasted discounted/undiscounted
 # Historical actuals
@@ -208,10 +208,10 @@ ax.plot(merged['invoice_period'], merged['forecast_discounted_price'],
 ax.plot(merged['invoice_period'], merged['forecast_undiscounted_price'],
          marker='s', linewidth=2.5, markersize=7, label='Forecast Undiscounted',
          color='#70AD47', linestyle='--', alpha=1.0)
-ax.set_title('Actual vs Forecast: Discounted and Undiscounted Prices', fontsize=13, fontweight='bold')
-ax.set_xlabel('Month', fontsize=11)
-ax.set_ylabel('Monthly Total ($)', fontsize=11)
-ax.legend(fontsize=9, loc='best')
+ax.set_title('Actual vs Forecast: Discounted and Undiscounted Prices', fontsize=21, fontweight='bold')
+ax.set_xlabel('Month', fontsize=16)
+ax.set_ylabel('Monthly Total ($)', fontsize=16)
+ax.legend(fontsize=12, loc='best')
 ax.grid(True, alpha=0.3)
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 ax.tick_params(axis='x', rotation=45)
