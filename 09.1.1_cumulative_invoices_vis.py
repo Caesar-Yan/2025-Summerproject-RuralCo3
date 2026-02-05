@@ -109,7 +109,7 @@ print("CREATING MONTHLY TOTALS VISUALIZATION")
 print("="*70)
 
 # Create figure and axis
-fig, ax = plt.subplots(figsize=(15, 8))
+fig, ax = plt.subplots(figsize=(13, 7))
 
 # Prepare data for plotting
 x = final_monthly['invoice_period']

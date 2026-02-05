@@ -381,8 +381,13 @@ def main():
     # Add final value annotation for with_discount
     disc_cumsum = last_disc['mean_total'].cumsum()
     final_disc = disc_cumsum.iloc[-1]
-    ax.text(last_disc['invoice_period'].iloc[-1], final_disc, f'  ${final_disc/1e3:.0f}K',
-            fontsize=10, fontweight='bold', color='#4472C4', va='center')
+    if final_disc >= 1e6:
+        disc_label = f'  ${final_disc/1e6:.2f}M'
+    else:
+        disc_label = f'  ${final_disc/1e3:.0f}K'
+    ax.text(last_disc['invoice_period'].iloc[-1], final_disc, disc_label,
+            fontsize=10, fontweight='bold', color='#4472C4', va='center',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='#4472C4', linewidth=1))
     
     # Scenario 2: no_discount
     undisc_df = summary_df[summary_df['scenario'] == 'no_discount'].sort_values('invoice_period').reset_index(drop=True)
@@ -396,33 +401,23 @@ def main():
     # Add final value annotation for no_discount
     undisc_cumsum = last_undisc['mean_total'].cumsum()
     final_undisc = undisc_cumsum.iloc[-1]
-    ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc, f'  ${final_undisc/1e3:.0f}K',
-            fontsize=10, fontweight='bold', color='#70AD47', va='center')
+    if final_undisc >= 1e6:
+        undisc_label = f'  ${final_undisc/1e6:.2f}M'
+    else:
+        undisc_label = f'  ${final_undisc/1e3:.0f}K'
+    ax.text(last_undisc['invoice_period'].iloc[-1], final_undisc, undisc_label,
+            fontsize=10, fontweight='bold', color='#70AD47', va='center',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='#70AD47', linewidth=1))
     
     ax.set_title('Revenue Scenarios: Cumulative Last 12 Months (Bootstrap Forecast Uncertainty)', 
-                 fontsize=14, fontweight='bold')
-    ax.set_xlabel('Month', fontsize=12)
-    ax.set_ylabel('Cumulative Revenue ($)', fontsize=12)
+                 fontsize=18, fontweight='bold')  # Increased from 14 to 18 (30% bigger)
+    ax.set_xlabel('Month', fontsize=16)  # Increased from 12 to 16 (30% bigger)
+    ax.set_ylabel('Cumulative Revenue ($)', fontsize=16)  # Increased from 12 to 16 (30% bigger)
     ax.grid(True, alpha=0.3)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     ax.tick_params(axis='x', rotation=45)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.1f}M'))
     ax.legend(fontsize=11, loc='upper left', framealpha=0.95)
-    
-    # Add summary statistics box
-    summary_text = (
-        f'WITH DISCOUNT:\n'
-        f'  Mean: ${with_disc["mean_total"].sum():,.0f}\n'
-        f'  95% CI: [${with_disc["lower_95_"].sum():,.0f}, ${with_disc["upper_95_"].sum():,.0f}]\n\n'
-        f'NO DISCOUNT:\n'
-        f'  Mean: ${no_disc["mean_total"].sum():,.0f}\n'
-        f'  95% CI: [${no_disc["lower_95_"].sum():,.0f}, ${no_disc["upper_95_"].sum():,.0f}]\n\n'
-        f'Ratio: {(no_disc["mean_total"].sum() / with_disc["mean_total"].sum()):.2f}x'
-    )
-    ax.text(0.98, 0.35, summary_text, transform=ax.transAxes, fontsize=9,
-            verticalalignment='top', horizontalalignment='right',
-            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
-            family='monospace')
     
     out_png = ALT_FORECAST / '15.5_cumulative_revenue_last_12_months.png'
     out_png.parent.mkdir(parents=True, exist_ok=True)

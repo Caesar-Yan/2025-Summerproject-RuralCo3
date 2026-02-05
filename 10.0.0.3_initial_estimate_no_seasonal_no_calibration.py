@@ -751,7 +751,7 @@ plt.close()
 
 # 2. Confidence Intervals
 print("  Creating confidence intervals...")
-fig, ax = plt.subplots(figsize=(12, 8))
+fig, ax = plt.subplots(figsize=(13, 7))
 
 scenarios = ['With Discount', 'No Discount']
 means = [summary_with['total_revenue_mean'], summary_no['total_revenue_mean']]
@@ -777,8 +777,8 @@ ax.set_yticks(y_pos)
 ax.set_yticklabels(scenarios, fontsize=12)
 ax.set_xlabel('Total Revenue ($)', fontsize=14)
 ax.set_title(f'Revenue with {CONFIDENCE_LEVEL*100:.0f}% Confidence Intervals\n({N_SIMULATIONS} Simulations with Re-Bundling)', 
-             fontsize=16, fontweight='bold', pad=20)
-ax.legend(fontsize=12)
+             fontsize=21, fontweight='bold', pad=20)
+ax.legend(loc='center left', fontsize=13, framealpha=0.95)
 ax.grid(True, alpha=0.3, axis='x')
 ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1000:.0f}K'))
 

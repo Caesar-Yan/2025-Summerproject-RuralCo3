@@ -196,17 +196,17 @@ fig, ax = plt.subplots(figsize=(14, 7))
 # Plot 1: Overlay of actual and forecasted discounted/undiscounted
 # Historical actuals
 ax.plot(historical_subset['invoice_period'], historical_subset['actual_discounted_price'],
-         marker='o', linewidth=2, markersize=6, label='Actual Discounted (9.4)', 
+         marker='o', linewidth=2, markersize=6, label='Actual Discounted', 
          color='#4472C4', linestyle='-', alpha=0.7)
 ax.plot(historical_subset['invoice_period'], historical_subset['actual_undiscounted_price'],
-         marker='s', linewidth=2, markersize=6, label='Actual Undiscounted (9.4)',
+         marker='s', linewidth=2, markersize=6, label='Actual Undiscounted',
          color='#70AD47', linestyle='-', alpha=0.7)
 # Forecasts
 ax.plot(merged['invoice_period'], merged['forecast_discounted_price'],
-         marker='o', linewidth=2.5, markersize=7, label='Forecast Discounted (11.3)', 
+         marker='o', linewidth=2.5, markersize=7, label='Forecast Discounted', 
          color='#4472C4', linestyle='--', alpha=1.0)
 ax.plot(merged['invoice_period'], merged['forecast_undiscounted_price'],
-         marker='s', linewidth=2.5, markersize=7, label='Forecast Undiscounted (11.5)',
+         marker='s', linewidth=2.5, markersize=7, label='Forecast Undiscounted',
          color='#70AD47', linestyle='--', alpha=1.0)
 ax.set_title('Actual vs Forecast: Discounted and Undiscounted Prices', fontsize=13, fontweight='bold')
 ax.set_xlabel('Month', fontsize=11)
@@ -232,10 +232,10 @@ historical_subset['actual_discount_amount'] = (historical_subset['actual_undisco
 forecast_discount = merged['forecast_undiscounted_price'] - merged['forecast_discounted_price']
 ax.bar(historical_subset['invoice_period'] - pd.Timedelta(days=5), 
         historical_subset['actual_discount_amount'],
-        width=10, label='Actual Discount (9.4)', color='#4472C4', alpha=0.6, edgecolor='black', linewidth=1)
+        width=10, label='Actual Discount', color='#4472C4', alpha=0.6, edgecolor='black', linewidth=1)
 ax.bar(merged['invoice_period'] + pd.Timedelta(days=5),
         forecast_discount,
-        width=10, label='Forecast Discount (11.3/11.5)', color='#C44E52', alpha=0.6, edgecolor='black', linewidth=1)
+        width=10, label='Forecast Discount', color='#C44E52', alpha=0.6, edgecolor='black', linewidth=1)
 ax.set_title('Actual vs Forecasted Discount Amount', fontsize=13, fontweight='bold')
 ax.set_xlabel('Month', fontsize=11)
 ax.set_ylabel('Discount Amount ($)', fontsize=11)
@@ -257,10 +257,10 @@ historical_subset['actual_discount_rate'] = (historical_subset['actual_discount_
                                              historical_subset['actual_undiscounted_price'] * 100)
 forecast_discount_rate = (forecast_discount / merged['forecast_undiscounted_price'] * 100)
 ax.plot(historical_subset['invoice_period'], historical_subset['actual_discount_rate'],
-         marker='o', linewidth=2, markersize=6, label='Actual Discount Rate (9.4)',
+         marker='o', linewidth=2, markersize=6, label='Actual Discount Rate',
          color='#4472C4', linestyle='-')
 ax.plot(merged['invoice_period'], forecast_discount_rate,
-         marker='s', linewidth=2.5, markersize=7, label='Forecast Discount Rate (11.3/11.5)',
+         marker='s', linewidth=2.5, markersize=7, label='Forecast Discount Rate',
          color='#70AD47', linestyle='--')
 ax.set_title('Actual vs Forecasted Discount Rate (% of Undiscounted)', fontsize=13, fontweight='bold')
 ax.set_xlabel('Month', fontsize=11)
@@ -286,7 +286,7 @@ error_undisc = merged['forecast_undiscounted_price'].values - merged['forecast_u
 width = 0.35
 x_pos = np.arange(len(merged))
 actual_rates_aligned = historical_subset['actual_discount_rate'].tail(len(merged)).values
-ax.bar(x_pos - width/2, actual_rates_aligned, width, label='Actual Rate (last months)', 
+ax.bar(x_pos - width/2, actual_rates_aligned, width, label='Actual Rate', 
         color='#4472C4', alpha=0.7, edgecolor='black', linewidth=1)
 ax.bar(x_pos + width/2, forecast_discount_rate.values, width, label='Forecast Rate',
         color='#70AD47', alpha=0.7, edgecolor='black', linewidth=1)

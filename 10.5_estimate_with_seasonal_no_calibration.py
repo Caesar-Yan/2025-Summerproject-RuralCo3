@@ -694,6 +694,40 @@ all_rounds_csv = OUTPUT_DIR / '10.5_monte_carlo_all_rounds_rebundled.csv'
 summary_stats_df.to_csv(all_rounds_csv, index=False)
 print(f"  ✓ Saved: {all_rounds_csv.name}")
 
+# Create revenue decomposition CSV
+revenue_decomposition = []
+for i in range(N_SIMULATIONS):
+    # With discount scenario
+    revenue_decomposition.append({
+        'simulation': i,
+        'scenario': 'with_discount',
+        'total_revenue': summary_stats_df.iloc[i]['with_discount_revenue'],
+        'interest_revenue': summary_stats_df.iloc[i]['with_discount_interest'],
+        'retained_discounts': summary_stats_df.iloc[i]['with_discount_retained'],
+        'late_rate_pct': summary_stats_df.iloc[i]['with_discount_late_rate'] * 100,
+        'n_late_statements': summary_stats_df.iloc[i]['with_discount_n_late'],
+        'n_total_statements': summary_stats_df.iloc[i]['with_discount_n_statements'],
+        'avg_statement_value': summary_stats_df.iloc[i]['with_discount_avg_statement_value']
+    })
+    
+    # No discount scenario
+    revenue_decomposition.append({
+        'simulation': i,
+        'scenario': 'no_discount',
+        'total_revenue': summary_stats_df.iloc[i]['no_discount_revenue'],
+        'interest_revenue': summary_stats_df.iloc[i]['no_discount_interest'],
+        'retained_discounts': summary_stats_df.iloc[i]['no_discount_retained'],
+        'late_rate_pct': summary_stats_df.iloc[i]['no_discount_late_rate'] * 100,
+        'n_late_statements': summary_stats_df.iloc[i]['no_discount_n_late'],
+        'n_total_statements': summary_stats_df.iloc[i]['no_discount_n_statements'],
+        'avg_statement_value': summary_stats_df.iloc[i]['no_discount_avg_statement_value']
+    })
+
+revenue_decomp_df = pd.DataFrame(revenue_decomposition)
+revenue_decomp_csv = OUTPUT_DIR / '10.5_revenue_decomposition_rebundled.csv'
+revenue_decomp_df.to_csv(revenue_decomp_csv, index=False)
+print(f"  ✓ Saved: {revenue_decomp_csv.name}")
+
 output_excel = OUTPUT_DIR / '10.5_FY2025_seasonal_detailed_simulations_rebundled.xlsx'
 with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
     first_round_with.to_excel(writer, sheet_name='With_Discount_Round0', index=False)
@@ -721,9 +755,9 @@ ax1.axvline(summary_with['total_revenue_ci_lower'], color='orange', linestyle=':
             label=f"{CONFIDENCE_LEVEL*100:.0f}% CI")
 ax1.axvline(summary_with['total_revenue_ci_upper'], color='orange', linestyle=':', linewidth=2)
 ax1.set_title(f'With Discount Revenue Distribution\n({N_SIMULATIONS} Sims with Re-Bundling)', 
-              fontsize=21, fontweight='bold')
-ax1.set_xlabel('Total Revenue ($)', fontsize=18, fontweight='bold')
-ax1.set_ylabel('Frequency', fontsize=18, fontweight='bold')
+              fontsize=16, fontweight='bold')
+ax1.set_xlabel('Total Revenue ($)', fontsize=14, fontweight='bold')
+ax1.set_ylabel('Frequency', fontsize=14, fontweight='bold')
 ax1.legend(fontsize=17)
 ax1.grid(True, alpha=0.3)
 ax1.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1000:.0f}K'))
@@ -739,9 +773,9 @@ ax2.axvline(summary_no['total_revenue_ci_upper'], color='orange', linestyle=':',
 ax2.axvline(TARGET_REVENUE, color='green', linestyle='-', linewidth=2.5, 
             label=f"Target: ${TARGET_REVENUE:,.0f}", alpha=0.8)
 ax2.set_title(f'No Discount Revenue Distribution\n({N_SIMULATIONS} Sims with Re-Bundling)', 
-              fontsize=21, fontweight='bold')
-ax2.set_xlabel('Total Revenue ($)', fontsize=18, fontweight='bold')
-ax2.set_ylabel('Frequency', fontsize=18, fontweight='bold')
+              fontsize=16, fontweight='bold')
+ax2.set_xlabel('Total Revenue ($)', fontsize=14, fontweight='bold')
+ax2.set_ylabel('Frequency', fontsize=14, fontweight='bold')
 ax2.legend(fontsize=17)
 ax2.grid(True, alpha=0.3)
 ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1000:.0f}K'))
@@ -756,7 +790,7 @@ plt.close()
 
 # 2. Confidence Intervals
 print("  Creating confidence intervals...")
-fig, ax = plt.subplots(figsize=(12, 8))
+fig, ax = plt.subplots(figsize=(13, 7))
 
 scenarios = ['With Discount', 'No Discount']
 means = [summary_with['total_revenue_mean'], summary_no['total_revenue_mean']]
@@ -780,9 +814,9 @@ ax.axvline(TARGET_REVENUE, color='red', linestyle='--', linewidth=2.5,
 
 ax.set_yticks(y_pos)
 ax.set_yticklabels(scenarios, fontsize=14)
-ax.set_xlabel('Total Revenue ($)', fontsize=18, fontweight='bold')
+ax.set_xlabel('Total Revenue ($)', fontsize=14, fontweight='bold')
 ax.set_title(f'Revenue with {CONFIDENCE_LEVEL*100:.0f}% CI\n({N_SIMULATIONS} Sims with Re-Bundling)', 
-             fontsize=21, fontweight='bold', pad=20)
+             fontsize=16, fontweight='bold', pad=20)
 ax.legend(fontsize=17)
 ax.grid(True, alpha=0.3, axis='x')
 ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1000:.0f}K'))
@@ -813,7 +847,7 @@ for patch, color in zip(bp['boxes'], box_colors):
 ax.axhline(TARGET_REVENUE, color='green', linestyle='--', linewidth=2.5, 
            label=f'Target: ${TARGET_REVENUE:,.0f}', alpha=0.8)
 
-ax.set_ylabel('Total Revenue ($)', fontsize=14)
+ax.set_ylabel('Total Revenue ($)', fontsize=14, fontweight='bold')
 ax.set_title(f'Revenue Distribution Comparison\n({N_SIMULATIONS} Sims with Re-Bundling)', 
              fontsize=16, fontweight='bold', pad=20)
 ax.legend(fontsize=12)
@@ -882,10 +916,10 @@ ax.text(monthly_no_stats.index[-1], no_final - 40000,
         bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='#4472C4'))
 
 ax.set_title(f'FY2025 Cumulative Revenue Historic Predictions\n({N_SIMULATIONS} Monte Carlo Sims)', 
-             fontsize=21, fontweight='bold', pad=20)
-ax.set_xlabel('Invoice Month', fontsize=18, fontweight='bold')
-ax.set_ylabel('Cumulative Revenue ($)', fontsize=18, fontweight='bold')
-ax.legend(loc='center left', fontsize=17, framealpha=0.95)
+             fontsize=16, fontweight='bold', pad=20)
+ax.set_xlabel('Invoice Month', fontsize=14, fontweight='bold')
+ax.set_ylabel('Cumulative Revenue ($)', fontsize=14, fontweight='bold')
+ax.legend(loc='center left', fontsize=13, framealpha=0.95)
 ax.grid(True, alpha=0.3)
 ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))

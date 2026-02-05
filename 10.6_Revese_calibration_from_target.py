@@ -427,15 +427,16 @@ calibration_summary.to_csv(calibration_file, index=False)
 print(f"✓ Saved calibration summary to: {calibration_file}")
 
 # ================================================================
-# Create visualization
+# Create visualizations (separate plots)
 # ================================================================
 print("\n" + "="*70)
-print("CREATING CALIBRATION VISUALIZATION")
+print("CREATING CALIBRATION VISUALIZATIONS")
 print("="*70)
 
-fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
-
 # Plot 1: Revenue vs Baseline Rate
+print("Creating Plot 1: Revenue vs Baseline Rate...")
+fig1, ax1 = plt.subplots(1, 1, figsize=(10, 8))
+
 baseline_range = [r['baseline'] for r in test_results]
 revenue_curve = [r['revenue'] for r in test_results]
 scaling_curve = [r['scaling'] for r in test_results]
@@ -460,7 +461,16 @@ ax1.legend(fontsize=10)
 ax1.grid(True, alpha=0.3)
 ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.2f}M'))
 
+plt.tight_layout()
+plot1_path = os.path.join(OUTPUT_DIR, '10.6_revenue_vs_baseline_rate.png')
+plt.savefig(plot1_path, dpi=300, bbox_inches='tight')
+print(f"✓ Saved Plot 1 to: {plot1_path}")
+plt.close()
+
 # Plot 2: Decile rates comparison
+print("Creating Plot 2: Decile Rates Comparison...")
+fig2, ax2 = plt.subplots(1, 1, figsize=(10, 8))
+
 deciles = list(range(n_deciles))
 snapshot_rates = [decile_snapshot_rates.get(i, 0) * 100 for i in deciles]
 calibrated_rates = [calibrated_decile_rates.get(i, 0) * 100 for i in deciles]
@@ -482,7 +492,16 @@ ax2.set_xticklabels([f'D{i}' for i in deciles])
 ax2.legend(fontsize=10)
 ax2.grid(True, alpha=0.3, axis='y')
 
+plt.tight_layout()
+plot2_path = os.path.join(OUTPUT_DIR, '10.6_decile_rates_comparison.png')
+plt.savefig(plot2_path, dpi=300, bbox_inches='tight')
+print(f"✓ Saved Plot 2 to: {plot2_path}")
+plt.close()
+
 # Plot 3: Monthly calibrated rates
+print("Creating Plot 3: Monthly Calibrated Rates...")
+fig3, ax3 = plt.subplots(1, 1, figsize=(12, 8))
+
 months = sorted(monthly_calibrated_rates.keys())
 month_labels = [f"{m[0]}-{m[1]:02d}" for m in months]
 month_rates = [monthly_calibrated_rates[m] * 100 for m in months]
@@ -500,7 +519,16 @@ ax3.set_xticklabels(month_labels, rotation=45, ha='right')
 ax3.legend(fontsize=10)
 ax3.grid(True, alpha=0.3)
 
+plt.tight_layout()
+plot3_path = os.path.join(OUTPUT_DIR, '10.6_monthly_calibrated_rates.png')
+plt.savefig(plot3_path, dpi=300, bbox_inches='tight')
+print(f"✓ Saved Plot 3 to: {plot3_path}")
+plt.close()
+
 # Plot 4: Summary statistics
+print("Creating Plot 4: Calibration Summary...")
+fig4, ax4 = plt.subplots(1, 1, figsize=(12, 10))
+
 ax4.axis('off')
 
 summary_text = f"""
@@ -549,9 +577,71 @@ ax4.text(0.1, 0.9, summary_text, transform=ax4.transAxes, fontsize=11,
         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
 
 plt.tight_layout()
-viz_path = os.path.join(OUTPUT_DIR, '10.6_calibration_analysis.png')
-plt.savefig(viz_path, dpi=300, bbox_inches='tight')
-print(f"✓ Saved visualization to: {viz_path}")
+plot4_path = os.path.join(OUTPUT_DIR, '10.6_calibration_summary.png')
+plt.savefig(plot4_path, dpi=300, bbox_inches='tight')
+print(f"✓ Saved Plot 4 to: {plot4_path}")
+plt.close()
+
+# Also create the combined visualization for reference
+print("Creating Combined Plot for reference...")
+fig_combined, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+
+# Plot 1: Revenue vs Baseline Rate
+ax1.plot([b*100 for b in baseline_range], revenue_curve, 'o-', linewidth=2.5, 
+        color='steelblue', markersize=8)
+ax1.axhline(y=TARGET_REVENUE, color='red', linestyle='--', linewidth=2, 
+           label='Target Revenue')
+ax1.axvline(x=calibrated_baseline * 100, color='green', linestyle=':', linewidth=2, 
+           label=f'Calibrated Baseline ({calibrated_baseline*100:.1f}%)')
+ax1.axvline(x=old_baseline_snapshot * 100, color='orange', linestyle=':', linewidth=2,
+           label=f'Snapshot Baseline ({old_baseline_snapshot*100:.1f}%)')
+ax1.scatter([calibrated_baseline * 100], [calibrated_revenue], s=200, color='green', 
+           zorder=5, edgecolor='black', linewidth=2)
+ax1.set_title('Revenue vs November Baseline Late Rate\n(Using Discounted Price)', 
+             fontsize=14, fontweight='bold')
+ax1.set_xlabel('November Baseline Late Rate (%)', fontsize=12)
+ax1.set_ylabel('Expected Revenue ($)', fontsize=12)
+ax1.legend(fontsize=10)
+ax1.grid(True, alpha=0.3)
+ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e6:.2f}M'))
+
+# Plot 2: Decile rates comparison
+ax2.bar(x - width/2, snapshot_rates, width, label='Snapshot', 
+       color='orange', alpha=0.7, edgecolor='black', linewidth=0.5)
+ax2.bar(x + width/2, calibrated_rates, width, 
+       label=f'Calibrated ({calibrated_baseline*100:.1f}%)', 
+       color='green', alpha=0.7, edgecolor='black', linewidth=0.5)
+ax2.set_title('Decile Base Rates: Snapshot vs Calibrated', fontsize=14, fontweight='bold')
+ax2.set_xlabel('Decile', fontsize=12)
+ax2.set_ylabel('Late Payment Rate (%)', fontsize=12)
+ax2.set_xticks(x)
+ax2.set_xticklabels([f'D{i}' for i in deciles])
+ax2.legend(fontsize=10)
+ax2.grid(True, alpha=0.3, axis='y')
+
+# Plot 3: Monthly calibrated rates
+ax3.plot(range(len(months)), month_rates, marker='o', linewidth=2.5, 
+        markersize=8, color='purple', alpha=0.8)
+ax3.axhline(y=calibrated_baseline * 100, color='green', linestyle='--', 
+           linewidth=2, alpha=0.5, label=f'November Baseline ({calibrated_baseline*100:.1f}%)')
+ax3.set_title('Seasonally Adjusted Rates (Calibrated)', fontsize=14, fontweight='bold')
+ax3.set_xlabel('Month', fontsize=12)
+ax3.set_ylabel('Average Late Payment Rate (%)', fontsize=12)
+ax3.set_xticks(range(len(months)))
+ax3.set_xticklabels(month_labels, rotation=45, ha='right')
+ax3.legend(fontsize=10)
+ax3.grid(True, alpha=0.3)
+
+# Plot 4: Summary statistics
+ax4.axis('off')
+ax4.text(0.1, 0.9, summary_text, transform=ax4.transAxes, fontsize=11,
+        verticalalignment='top', family='monospace',
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+
+plt.tight_layout()
+combined_path = os.path.join(OUTPUT_DIR, '10.6_calibration_analysis_combined.png')
+plt.savefig(combined_path, dpi=300, bbox_inches='tight')
+print(f"✓ Saved combined plot to: {combined_path}")
 plt.close()
 
 print("\n" + "="*70)
@@ -572,5 +662,9 @@ print(f"  2. Apply seasonal adjustments to this calibrated rate")
 print(f"  3. Re-run simulations (10.7, 10.10) with calibrated decile rates")
 print(f"\nFiles created:")
 print(f"  - 10.6_calibrated_baseline_late_rate.csv")
-print(f"  - 10.6_calibration_analysis.png")
+print(f"  - 10.6_revenue_vs_baseline_rate.png")
+print(f"  - 10.6_decile_rates_comparison.png") 
+print(f"  - 10.6_monthly_calibrated_rates.png")
+print(f"  - 10.6_calibration_summary.png")
+print(f"  - 10.6_calibration_analysis_combined.png (all plots combined)")
 print("="*70)

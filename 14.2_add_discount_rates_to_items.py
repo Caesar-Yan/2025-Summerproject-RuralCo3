@@ -7,6 +7,8 @@ Purpose:
     For L1, L2, L3_blackwoods, and L3_methven_motors: match to actual merchant discounts
     For other layers: use average discount by match_layer
 
+rerun invoice transformations after updating invoice totals further upstream
+
 Inputs:
     - 13.7_matching_progress.csv (invoice line items with match_layers)
     - 14.1_average_discount_by_match_layer.csv (average discounts by layer)
